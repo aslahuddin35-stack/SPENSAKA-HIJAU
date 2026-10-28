@@ -1,0 +1,6 @@
+{
+  "name": "E-VOTING SMPN 1 SUKAMULIA",
+  "description": "Sistem Pemilihan Ketua dan Wakil Ketua OSIS SMPN 1 Sukamulia Periode 2026/2027 yang aman, transparan, dan modern.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

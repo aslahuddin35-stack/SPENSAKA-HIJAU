@@ -1,0 +1,1059 @@
+# MASTER PROMPT PEMBUATAN APLIKASI E-VOTING SMPN 1 SUKAMULIA 2026/2027
+
+## 1. PERAN DAN TUGAS UTAMA
+
+Bertindaklah sebagai Senior Full-Stack Developer, Software Architect, UI/UX Designer, Database Engineer, dan Cybersecurity Engineer yang berpengalaman membangun sistem pemungutan suara digital untuk institusi pendidikan.
+
+Bangun sebuah aplikasi web full-stack bernama **E-VOTING SMPN 1 SUKAMULIA**, yaitu sistem pemilihan Ketua dan Wakil Ketua OSIS periode 2026/2027 yang profesional, aman, transparan, responsif, mudah digunakan, dan siap dikembangkan menjadi aplikasi produksi.
+
+Aplikasi ditujukan untuk lebih dari 500 siswa yang menggunakan perangkat desktop, laptop, tablet, dan smartphone secara bersamaan.
+
+**Ketentuan utama:**
+- Seluruh tombol, menu, formulir, CRUD, autentikasi, impor, ekspor, penyimpanan, grafik, dan laporan harus berfungsi nyata.
+- Gunakan database sungguhan, bukan data simulasi sebagai implementasi akhir.
+- Jangan membuat tombol dekoratif yang tidak mempunyai fungsi.
+- Jangan menggunakan data dummy sebagai pengganti database produksi.
+- Jangan meninggalkan fungsi penting dalam bentuk TODO, placeholder, atau pseudocode.
+- Apabila kredensial layanan belum tersedia, buat konfigurasi dan petunjuk integrasi yang lengkap tanpa mengarang kredensial.
+- Sertakan seluruh source code, migrasi SQL, konfigurasi, dan petunjuk instalasi.
+- Lakukan pengujian alur utama dan perbaiki error sebelum menyatakan aplikasi selesai.
+
+## 2. IDENTITAS APLIKASI DAN LOGO SEKOLAH
+
+Nama aplikasi: **E-VOTING SMPN 1 SUKAMULIA**
+
+Nama sekolah: SMP Negeri 1 Sukamulia
+
+Periode pemilihan: 2026/2027
+
+Bahasa antarmuka: Bahasa Indonesia.
+
+Logo resmi sekolah tersedia melalui Google Drive:
+
+https://drive.google.com/file/d/1ilS6KW0V81MCcxfRqwgYO4mFH5bE3ubi/view?usp=sharing
+
+Gunakan logo tersebut sebagai identitas utama pada:
+- Halaman login siswa.
+- Halaman login administrator.
+- Sidebar dashboard administrator.
+- Header aplikasi.
+- Kartu login siswa.
+- Halaman pemungutan suara.
+- Berita acara hasil pemilihan PDF.
+
+Ambil file logo dari tautan tersebut apabila akses memungkinkan. Jika tidak dapat diakses secara otomatis, sediakan fitur unggah logo melalui menu Pengaturan. Jangan mengganti logo resmi dengan logo rekaan.
+
+Nama sekolah, logo, periode pemilihan, dan informasi resmi harus diambil secara dinamis dari pengaturan database.
+
+## 3. TEKNOLOGI WAJIB
+
+Gunakan teknologi berikut:
+
+**Frontend**
+- Vue.js 3 dengan Composition API.
+- Vite.
+- JavaScript ES Modules atau TypeScript.
+- Bootstrap 5.
+- Bootstrap Icons.
+- Vue Router.
+- Pinia untuk state management jika diperlukan.
+- Chart.js untuk grafik.
+- SheetJS untuk membaca dan menghasilkan file Excel.
+- jsPDF atau solusi PDF berbasis server untuk laporan resmi.
+- Komponen reusable dan struktur kode modular.
+
+**Backend dan database**
+- Supabase PostgreSQL.
+- Supabase Auth untuk autentikasi administrator.
+- Supabase Edge Functions atau backend tepercaya untuk operasi sensitif.
+- Supabase RPC dengan PostgreSQL untuk transaksi pemungutan suara.
+- Supabase Storage untuk logo dan foto kandidat.
+- Row Level Security (RLS) untuk seluruh tabel yang dapat diakses melalui API.
+
+Jangan meletakkan Supabase Service Role Key, secret key, atau kredensial administratif di dalam kode frontend, repository publik, maupun file `.env` yang dibundel ke browser.
+
+Gunakan environment variable sesuai kebutuhan dan sertakan `.env.example` tanpa kredensial rahasia.
+
+## 4. DESAIN UI/UX: PREMIUM, ELEGAN, DAN MODERN
+
+Rancang aplikasi dengan standar desain produk digital profesional, bukan tampilan dashboard generik yang seadanya.
+
+### A. Konsep visual
+
+Gunakan gaya **Premium School Election Dashboard** dengan karakteristik:
+- Elegan dan profesional.
+- Modern, bersih, dan minimalis.
+- Glassmorphism secara selektif.
+- Efek kedalaman atau subtle 3D pada elemen tertentu.
+- Kartu statistik dengan hierarki visual yang jelas.
+- Tipografi modern dan mudah dibaca.
+- Ikon Bootstrap Icons yang konsisten.
+- Bayangan lembut, border halus, dan sudut membulat.
+- Animasi ringan, transisi halus, dan feedback interaksi.
+- Kontras warna yang memenuhi standar aksesibilitas.
+- Tampilan responsif dan optimal untuk layar kecil.
+
+### B. Palet warna
+
+Gunakan palet identitas sekolah yang elegan:
+
+- Emerald Green: warna utama dan tombol aksi.
+- Deep Forest Green: sidebar dan header utama.
+- Putih: permukaan konten.
+- Gold: aksen premium untuk identitas pemilihan.
+- Abu-abu netral: teks sekunder, border, dan latar belakang.
+- Merah: hanya untuk peringatan dan tindakan berisiko.
+
+Hindari penggunaan gradasi berlebihan, terlalu banyak warna mencolok, atau efek kaca yang mengurangi keterbacaan.
+
+### C. Halaman login
+
+Buat halaman login dengan komposisi profesional:
+- Logo resmi sekolah.
+- Nama E-VOTING SMPN 1 SUKAMULIA.
+- Periode pemilihan 2026/2027.
+- Ilustrasi atau elemen visual pemilihan OSIS yang relevan.
+- Kartu login dengan bayangan lembut.
+- Latar belakang elegan bernuansa hijau emerald dan putih.
+- Footer informasi sekolah.
+
+Login administrator dan siswa harus dipisahkan secara jelas.
+
+### D. Dashboard administrator
+
+Gunakan sidebar modern di desktop dan off-canvas navigation di perangkat mobile.
+
+Sidebar memiliki logo, nama aplikasi, menu berikon, indikator halaman aktif, dan tombol keluar.
+
+Header menampilkan judul halaman, periode pemilihan, identitas administrator, dan informasi status sistem.
+
+Konten utama menggunakan grid responsif, kartu statistik, tabel profesional, grafik, pencarian, filter, pagination, skeleton loading, empty state, notifikasi toast, dan modal konfirmasi.
+
+### E. Halaman siswa
+
+Tampilan siswa harus sederhana dan mudah dipahami:
+- Logo sekolah dan nama aplikasi.
+- Biodata siswa.
+- Status hak suara.
+- Kartu kandidat yang menarik.
+- Tombol aksi yang jelas.
+- Konfirmasi sebelum suara dikirim.
+- Indikator proses pemungutan suara.
+- Notifikasi berhasil atau gagal.
+
+Utamakan kemudahan penggunaan bagi siswa SMP.
+
+### F. Responsivitas
+
+Pastikan:
+- Desktop menampilkan sidebar dan dashboard penuh.
+- Tablet menampilkan layout yang fleksibel.
+- Smartphone menampilkan navigasi yang sesuai, kartu kandidat satu kolom atau dua kolom sesuai lebar layar, serta tombol yang mudah disentuh.
+- Tidak terdapat horizontal overflow.
+- Formulir, tabel, grafik, dan modal tetap dapat digunakan pada layar kecil.
+
+## 5. ROLE DAN HAK AKSES
+
+Aplikasi memiliki dua role utama.
+
+### Administrator
+
+Administrator dapat:
+- Mengelola data kelas.
+- Mengelola akun siswa dan token login.
+- Mengelola kandidat.
+- Melihat statistik partisipasi.
+- Melihat perolehan suara agregat.
+- Mengatur identitas sekolah dan jadwal.
+- Menghasilkan berita acara PDF.
+- Mengunduh dan mengimpor template Excel.
+- Mengunduh kartu login siswa.
+- Mengakses audit aktivitas administratif yang diizinkan.
+
+### User/Siswa
+
+Siswa dapat:
+- Login menggunakan token unik.
+- Melihat biodata sendiri.
+- Melihat status hak suara sendiri.
+- Melihat informasi seluruh kandidat.
+- Memberikan satu suara jika memenuhi syarat.
+- Melihat konfirmasi bahwa suara berhasil dicatat.
+
+Siswa tidak boleh:
+- Mengakses dashboard administrator.
+- Melihat biodata siswa lain.
+- Mengakses token milik siswa lain.
+- Mengubah status pemungutan suara sendiri.
+- Memberikan suara lebih dari satu kali.
+- Mengakses identitas pemilih yang terkait dengan kandidat pilihannya.
+
+Semua pembatasan harus diterapkan di backend dan database, bukan hanya melalui tampilan frontend.
+
+## 6. SISTEM LOGIN ADMINISTRATOR
+
+Sediakan halaman login administrator menggunakan Supabase Auth.
+
+Ketentuan:
+- Administrator masuk menggunakan email/username yang dipetakan secara aman ke identitas autentikasi dan kata sandi.
+- Kata sandi tidak pernah disimpan dalam plain text.
+- Role administrator ditentukan dan divalidasi di backend.
+- Pembuatan akun administrator dilakukan melalui proses provisioning yang aman.
+- Siswa tidak dapat membuat akun administrator sendiri.
+- Sediakan fitur mengganti kredensial administrator dengan autentikasi ulang jika diperlukan.
+- Sediakan mekanisme pemulihan akun yang aman.
+- Terapkan rate limiting, pembatasan percobaan login, dan pesan kesalahan yang tidak membocorkan informasi sensitif.
+- Logout harus menghapus sesi autentikasi dan state sensitif yang tersimpan di browser.
+
+## 7. SISTEM LOGIN SISWA MENGGUNAKAN TOKEN
+
+Login siswa cukup menggunakan **satu token unik**, tanpa NISN dan tanpa tanggal lahir.
+
+### Pembuatan token
+
+Administrator dapat menghasilkan token untuk setiap siswa melalui menu Siswa/User.
+
+Ketentuan token:
+- Token harus dibuat secara acak menggunakan generator kriptografis yang aman.
+- Token memiliki entropi yang cukup tinggi dan tidak mudah ditebak.
+- Setiap token terhubung ke tepat satu siswa.
+- Token tidak boleh duplikat.
+- Token tidak ditampilkan dalam tabel umum setelah proses penerbitan selesai, kecuali melalui alur penerbitan atau pengunduhan kartu yang diotorisasi.
+- Jangan menyimpan token mentah dalam database jika hash token sudah cukup untuk autentikasi.
+- Sediakan mekanisme penerbitan ulang dan pencabutan token.
+- Token yang sudah dicabut tidak dapat digunakan.
+- Token hanya dapat mengakses identitas siswa yang bersangkutan.
+
+### Proses login
+
+1. Siswa membuka halaman login.
+2. Siswa memasukkan token pada kolom yang tersedia.
+3. Sistem memvalidasi token melalui backend tepercaya.
+4. Backend memverifikasi hash token, status akun, jadwal pemilihan, dan status hak suara.
+5. Jika valid, backend menerbitkan sesi pemilih yang aman dan terbatas.
+6. Siswa diarahkan ke halaman biodata dan status hak suara.
+
+Jangan mengirim hash token, secret, atau akses administratif ke frontend.
+
+Gunakan cookie HttpOnly, Secure, dan SameSite jika arsitektur backend memungkinkan. Jangan menyimpan token autentikasi mentah dalam localStorage.
+
+Sesi pemilih harus mempunyai masa berlaku yang terbatas dan dapat dicabut.
+
+### Login ulang setelah memilih
+
+Jika siswa login kembali setelah memberikan suara:
+- Tampilkan informasi: **"Anda sudah menggunakan hak suara."**
+- Tampilkan biodata dan status sudah memilih.
+- Jangan tampilkan tombol Berikan Suara.
+- Jangan izinkan pemungutan suara ulang meskipun browser direfresh, sesi berakhir, atau perangkat berganti.
+
+## 8. MENU ADMINISTRATOR
+
+Sidebar administrator harus memiliki menu berikut:
+
+1. Beranda.
+2. Kelas.
+3. Siswa/User.
+4. Calon Kandidat.
+5. Perolehan Suara.
+6. Berita Acara.
+7. Pengaturan.
+8. Keluar.
+
+Semua menu wajib memiliki halaman nyata dan fungsi yang terhubung dengan database.
+
+## 9. MENU BERANDA
+
+Tampilkan dashboard statistik secara dinamis.
+
+Kartu statistik:
+- Total siswa terdaftar.
+- Total kelas.
+- Total kandidat.
+- Jumlah siswa yang sudah memilih.
+- Jumlah siswa yang belum memilih.
+- Persentase partisipasi.
+- Total suara sah yang tercatat.
+- Status jadwal pemilihan.
+
+Rumus partisipasi:
+
+Persentase partisipasi = jumlah siswa yang sudah memilih dibagi total siswa yang memenuhi syarat, dikalikan 100%.
+
+Jika total siswa adalah nol, tampilkan 0% dan hindari pembagian dengan nol.
+
+Tambahkan:
+- Grafik partisipasi.
+- Ringkasan status pemilihan.
+- Waktu pembaruan data terakhir.
+- Informasi apakah pemungutan suara belum dimulai, sedang berlangsung, atau sudah berakhir.
+
+Gunakan query database aktual. Jangan menghitung statistik berdasarkan data hardcoded.
+
+## 10. MENU KELAS
+
+Buat fitur CRUD kelas lengkap.
+
+Data kelas:
+- ID kelas.
+- Nama kelas.
+- Tingkat.
+- Keterangan opsional.
+- Status aktif/nonaktif.
+- Waktu pembuatan dan pembaruan.
+
+Fitur:
+- Tambah kelas.
+- Lihat daftar kelas.
+- Edit kelas.
+- Hapus kelas dengan pemeriksaan relasi.
+- Cari kelas.
+- Filter berdasarkan tingkat.
+- Pagination.
+- Validasi agar nama kelas tidak duplikat.
+
+Jangan menghapus kelas secara paksa jika masih memiliki siswa. Tampilkan penjelasan dan minta administrator memindahkan siswa atau menonaktifkan kelas terlebih dahulu.
+
+## 11. MENU SISWA/USER
+
+Buat modul manajemen siswa yang lengkap.
+
+### Data siswa
+
+- ID siswa.
+- NISN.
+- Nama lengkap.
+- Tanggal lahir jika diperlukan untuk administrasi.
+- Kelas.
+- Status akun.
+- Status hak suara.
+- Status token.
+- Waktu pembuatan dan pembaruan.
+
+NISN harus unik dan divalidasi sebagai identitas administrasi. Namun, NISN tidak digunakan untuk login siswa.
+
+Status hak suara harus berasal dari catatan pemungutan suara yang tepercaya, bukan nilai yang dapat diubah langsung oleh frontend.
+
+### Fitur CRUD
+
+- Tambah siswa.
+- Lihat detail siswa.
+- Edit siswa.
+- Nonaktifkan siswa.
+- Hapus siswa dengan pemeriksaan integritas data.
+- Pencarian berdasarkan NISN atau nama.
+- Filter berdasarkan kelas.
+- Filter sudah memilih/belum memilih.
+- Filter status token.
+- Pagination.
+- Pilih beberapa siswa untuk tindakan administratif yang aman.
+
+### Download template Excel
+
+Sediakan tombol **Download Template Siswa (.xlsx)**.
+
+Template minimal memiliki kolom:
+- NISN.
+- Nama Lengkap.
+- Tanggal Lahir.
+- Nama Kelas.
+
+Tambahkan sheet petunjuk yang menjelaskan:
+- Format setiap kolom.
+- Kolom wajib.
+- Format tanggal.
+- Ketentuan NISN.
+- Penulisan nama kelas yang harus sesuai dengan database.
+- Contoh data yang jelas ditandai sebagai contoh.
+
+Jangan memasukkan token login aktif ke template impor standar.
+
+### Import siswa
+
+Sediakan tombol **Import Excel**.
+
+Alur:
+1. Administrator memilih file `.xlsx` atau `.csv` yang didukung.
+2. Sistem membaca dan memvalidasi struktur file.
+3. Tampilkan pratinjau data sebelum disimpan.
+4. Validasi NISN duplikat.
+5. Validasi kolom wajib dan format tanggal.
+6. Validasi kelas.
+7. Tampilkan jumlah baris valid dan tidak valid.
+8. Tampilkan kesalahan per baris agar dapat diperbaiki.
+9. Administrator mengonfirmasi impor.
+10. Backend menyimpan data dengan transaksi atau batch yang aman.
+11. Tampilkan laporan jumlah berhasil dan gagal.
+
+Jangan langsung mengimpor file tanpa pratinjau dan konfirmasi.
+
+Sediakan opsi kebijakan konflik yang jelas, misalnya melewati NISN yang sudah terdaftar. Jangan menimpa data yang sudah ada secara diam-diam.
+
+### Download kartu login siswa
+
+Sediakan tombol **Download Kartu Login Siswa**.
+
+Kartu memuat:
+- Logo resmi sekolah.
+- Nama aplikasi.
+- Nama sekolah.
+- Periode pemilihan.
+- Nama lengkap siswa.
+- NISN sebagai identitas administrasi.
+- Kelas.
+- Token login siswa.
+- QR code yang berisi token hanya jika benar-benar dibutuhkan dan penggunaannya dijelaskan.
+- Petunjuk singkat cara login.
+- Informasi bahwa token bersifat rahasia.
+
+Fitur:
+- Unduh kartu satu siswa dalam PDF.
+- Unduh kartu beberapa siswa sekaligus.
+- Unduh seluruh kartu siswa yang berhak memilih.
+- Tata letak kartu siap cetak pada kertas A4.
+- Pemotongan kartu yang rapi.
+- Identitas sekolah terlihat jelas.
+
+Token hanya boleh muncul dalam proses penerbitan kartu yang diotorisasi. Jangan dapatkan token mentah dari hash database. Jika token tidak lagi tersedia setelah penerbitan awal, sediakan proses rotasi token yang aman, bukan mencoba memulihkan token dari hash.
+
+Setiap proses rotasi harus mencabut token lama, menerbitkan token baru, dan mencatat aktivitas administratif tanpa menyimpan token mentah dalam log.
+
+Batasi akses pengunduhan massal dan jangan menyediakan tautan publik untuk file kartu login.
+
+## 12. MENU CALON KANDIDAT
+
+Buat CRUD kandidat lengkap.
+
+Data kandidat:
+- ID kandidat.
+- Nomor urut.
+- Foto resmi.
+- Nama calon ketua.
+- Nama calon wakil ketua.
+- Kelas atau identitas administratif jika diperlukan.
+- Visi.
+- Misi.
+- Slogan.
+- Deskripsi program.
+- Status aktif.
+- Waktu pembuatan dan pembaruan.
+
+Fitur:
+- Tambah kandidat.
+- Edit kandidat.
+- Hapus kandidat dengan pemeriksaan apakah pemungutan suara sudah dimulai.
+- Upload foto ke Supabase Storage.
+- Pratinjau foto.
+- Pengelolaan nomor urut.
+- Validasi nomor urut unik dalam satu periode pemilihan.
+- Pengurutan kandidat.
+- Pengaturan status publikasi.
+
+Gunakan validasi tipe file dan ukuran file. Jangan menerima file berbahaya atau mengandalkan nama file sebagai validasi.
+
+Tampilkan kandidat dengan kartu modern, foto berkualitas baik, nomor urut besar, nama ketua dan wakil, visi, misi, serta slogan.
+
+Setelah pemungutan suara dimulai, perubahan kandidat yang dapat memengaruhi integritas pemilihan harus dibatasi dan memerlukan prosedur administratif yang terdokumentasi.
+
+## 13. HALAMAN PEMUNGUTAN SUARA SISWA
+
+Setelah login, tampilkan halaman biodata:
+- Logo sekolah.
+- Nama siswa.
+- NISN.
+- Kelas.
+- Status akun.
+- Status hak suara.
+
+Jika siswa belum memilih dan jadwal sedang berlangsung, tampilkan tombol:
+
+**BERIKAN SUARA**
+
+Jika siswa sudah memilih, tampilkan:
+
+**ANDA SUDAH MENGGUNAKAN HAK SUARA**
+
+Jangan menampilkan tombol pemungutan suara untuk siswa yang sudah memilih, siswa nonaktif, atau siswa yang tidak memenuhi syarat.
+
+### Halaman pemilihan kandidat
+
+Tampilkan seluruh kandidat aktif dengan:
+- Foto.
+- Nomor urut.
+- Nama ketua dan wakil.
+- Visi.
+- Misi.
+- Slogan.
+- Tombol Pilih Kandidat.
+
+Siswa hanya dapat memilih satu kandidat.
+
+Saat siswa memilih kandidat:
+1. Tampilkan indikator kandidat terpilih.
+2. Buka modal konfirmasi.
+3. Tampilkan nomor urut dan nama pasangan kandidat.
+4. Tampilkan peringatan bahwa suara tidak dapat diubah setelah dikirim.
+5. Sediakan tombol Batal dan Konfirmasi Suara.
+6. Tombol konfirmasi harus mencegah pengiriman ganda selama proses berlangsung.
+7. Backend memvalidasi kembali sesi, kelayakan siswa, jadwal, kandidat, dan status hak suara.
+8. Simpan suara secara atomik di database.
+9. Jika berhasil, tampilkan pesan:
+
+**"Suara Anda berhasil dicatat, terima kasih telah berpartisipasi"**
+
+10. Tampilkan pesan tersebut selama 4 detik.
+11. Setelah 4 detik, akhiri sesi pemilih, hapus state sensitif dari browser, lalu arahkan siswa kembali ke halaman login.
+12. Jika terjadi kegagalan, tampilkan pesan yang jelas tanpa mengungkap detail internal database.
+
+Jangan menampilkan pilihan kandidat sebelumnya setelah pemungutan suara selesai.
+
+## 14. KEAMANAN DAN INTEGRITAS SUARA
+
+Bagian ini merupakan prioritas tertinggi.
+
+Sistem harus mencegah:
+- Pemungutan suara ganda.
+- Pengiriman permintaan berulang.
+- Manipulasi status melalui browser.
+- Penggunaan token yang dicabut.
+- Akses siswa terhadap data siswa lain.
+- Pengiriman suara oleh siswa nonaktif.
+- Pemungutan suara di luar jadwal.
+- Perubahan hasil suara oleh administrator.
+- Kebocoran token melalui log atau URL.
+- Pengubahan pilihan suara setelah dikirim.
+- Pengaitan identitas siswa dengan kandidat yang dipilih melalui dashboard.
+
+### Implementasi database
+
+Gunakan PostgreSQL transaction dan RPC atau backend tepercaya untuk menyelesaikan pemungutan suara secara atomik.
+
+Buat constraint unik yang menjamin maksimal satu catatan suara per pemilih per periode pemilihan, misalnya dengan `UNIQUE (election_id, voter_id)`.
+
+Validasi ulang kelayakan pemilih di dalam transaksi, bukan hanya pada halaman frontend.
+
+Pastikan dua permintaan bersamaan tidak menghasilkan dua suara. Gunakan constraint database sebagai pertahanan terakhir, disertai transaksi dan penanganan konflik.
+
+Jangan menggunakan pola tidak aman berupa:
+1. Memeriksa status di frontend.
+2. Mengirim suara melalui permintaan terpisah.
+3. Memperbarui status memilih melalui permintaan lain.
+
+### Kerahasiaan pilihan
+
+Admin hanya boleh melihat:
+- Status siswa sudah/belum memilih.
+- Total suara sah.
+- Jumlah suara per kandidat.
+- Statistik partisipasi.
+- Ringkasan hasil pemilihan.
+
+Admin tidak boleh melihat hubungan antara identitas siswa dan kandidat yang dipilih.
+
+Rancang model data agar identitas pemilih dan pilihan suara dipisahkan secara logis dan akses ke data suara individual tidak tersedia melalui API admin. Catatan suara tidak boleh menyimpan NISN atau nama siswa secara langsung.
+
+Gunakan pencatatan status partisipasi yang terpisah dari data pilihan. Jika dibutuhkan untuk mencegah suara ganda, gunakan ID pemilih yang tidak ditampilkan bersama pilihan kandidat. Dokumentasikan batasan teknis mengenai korelasi melalui waktu transaksi dan log.
+
+Jangan menjanjikan anonimitas kriptografis sempurna jika sistem belum menggunakan protokol pemungutan suara anonim yang sesuai.
+
+### RLS
+
+Terapkan RLS pada semua tabel yang dapat diakses melalui Supabase API.
+
+Kebijakan minimum:
+- Siswa hanya dapat mengakses data profilnya sendiri.
+- Siswa tidak dapat membaca daftar token siswa lain.
+- Siswa tidak dapat menulis atau memperbarui catatan suara secara langsung.
+- Siswa hanya dapat memanggil operasi pemungutan suara yang telah memvalidasi identitas dan kelayakannya.
+- Admin dapat mengelola data administratif sesuai kewenangannya.
+- Admin tidak memiliki akses ke pemetaan identitas pemilih dengan kandidat yang dipilih.
+- Tabel hasil agregat hanya dapat diakses sesuai aturan publikasi hasil.
+- Bucket penyimpanan menggunakan kebijakan akses yang sesuai.
+- Tidak ada tabel sensitif yang dibiarkan terbuka untuk anon atau authenticated tanpa alasan yang jelas.
+
+Jangan menonaktifkan RLS untuk mempermudah implementasi.
+
+Jangan memberikan hak EXECUTE RPC yang sensitif kepada role yang tidak sesuai. Tetapkan `search_path` yang aman untuk fungsi berhak istimewa dan gunakan validasi otorisasi di dalam fungsi.
+
+## 15. MENU PEROLEHAN SUARA
+
+Buat halaman perolehan suara yang menampilkan hasil agregat dari database.
+
+Komponen:
+- Total suara sah.
+- Total siswa yang memenuhi syarat.
+- Jumlah siswa yang sudah memilih.
+- Jumlah siswa yang belum memilih.
+- Persentase partisipasi.
+- Jumlah suara masing-masing kandidat.
+- Persentase suara masing-masing kandidat.
+- Grafik batang.
+- Grafik donat atau pie.
+- Tabel hasil.
+- Waktu pembaruan terakhir.
+
+Tabel hasil:
+
+| No. | Kandidat | Ketua dan Wakil | Jumlah Suara | Persentase |
+|---|---|---|---:|---:|
+
+Rumus persentase suara kandidat:
+
+Persentase suara kandidat = jumlah suara kandidat dibagi total suara sah, dikalikan 100%.
+
+Jika total suara sah nol, tampilkan 0%.
+
+Ketentuan:
+- Hasil diambil dari database.
+- Hasil tidak boleh diubah manual melalui frontend.
+- Gunakan satu sumber data yang konsisten untuk tabel dan grafik.
+- Perbarui hasil secara berkala atau gunakan Supabase Realtime dengan kontrol akses yang tepat.
+- Jangan menampilkan identitas pemilih yang memilih kandidat tertentu.
+- Sebelum jadwal publikasi, hasil hanya dapat dilihat oleh administrator yang berwenang.
+- Jika pemilihan telah selesai dan hasil dipublikasikan, sediakan halaman hasil yang sesuai dengan kebijakan sekolah.
+
+### Penanganan hasil seri
+
+Jika dua kandidat memperoleh suara sama pada posisi tertinggi:
+- Tampilkan status hasil seri.
+- Jangan otomatis menetapkan pemenang.
+- Sediakan prosedur tindak lanjut sesuai keputusan panitia dan aturan sekolah.
+- Catat keputusan final yang dibuat oleh pihak berwenang.
+
+## 16. MENU BERITA ACARA DAN DOWNLOAD PDF
+
+Buat menu **Berita Acara** untuk menyusun dan mengunduh dokumen resmi hasil pemilihan Ketua dan Wakil Ketua OSIS SMPN 1 Sukamulia.
+
+Sediakan tombol:
+- Buat Berita Acara.
+- Pratinjau Dokumen.
+- Download PDF.
+- Cetak Dokumen.
+- Riwayat Berita Acara.
+
+### Isi berita acara
+
+Dokumen PDF harus memuat:
+
+1. Logo resmi sekolah.
+2. Nama sekolah.
+3. Judul BERITA ACARA PEMUNGUTAN DAN PENGHITUNGAN SUARA.
+4. Periode pemilihan 2026/2027.
+5. Hari dan tanggal pelaksanaan.
+6. Waktu pelaksanaan.
+7. Tempat pelaksanaan.
+8. Jumlah seluruh siswa yang memenuhi syarat memilih.
+9. Jumlah siswa yang menggunakan hak suara.
+10. Jumlah siswa yang tidak menggunakan hak suara.
+11. Jumlah suara sah.
+12. Jumlah suara tidak sah, jika mekanisme sistem memang memungkinkan suara tidak sah.
+13. Tabel hasil perolehan suara setiap pasangan kandidat.
+14. Persentase perolehan suara.
+15. Penetapan hasil sesuai ketentuan yang berlaku.
+16. Keterangan hasil seri jika terjadi.
+17. Pernyataan bahwa berita acara dibuat berdasarkan hasil sistem dan diverifikasi panitia.
+18. Kolom tanda tangan Ketua Panitia, Sekretaris, dan pihak sekolah yang berwenang.
+19. Tempat dan tanggal pengesahan.
+20. Nomor dokumen jika ditetapkan sekolah.
+
+Data yang berasal dari sistem harus diambil otomatis dari database. Data pelaksanaan yang belum tersedia harus dapat dilengkapi melalui formulir, bukan diisi dengan tanggal atau informasi rekaan.
+
+### Desain PDF
+
+Gunakan format A4 dengan:
+- Tata letak formal dan profesional.
+- Logo pada bagian kepala dokumen.
+- Tipografi yang mudah dibaca.
+- Tabel dengan border rapi.
+- Nomor halaman bila dokumen lebih dari satu halaman.
+- Margin yang sesuai.
+- Area tanda tangan yang cukup.
+- Nama file otomatis, misalnya `Berita_Acara_EVoting_SMPN1_Sukamulia_2026-2027.pdf`.
+
+Gunakan generator PDF yang stabil, seperti jsPDF dengan AutoTable untuk dokumen yang sesuai, atau generator PDF berbasis server jika membutuhkan kontrol tata letak dan font yang lebih baik.
+
+Sediakan pratinjau sebelum pengunduhan.
+
+Dokumen harus menyatakan bahwa hasil berasal dari sistem dan dapat diverifikasi oleh panitia. Jangan menambahkan tanda tangan digital atau pengesahan palsu.
+
+### Arsip berita acara
+
+Simpan metadata dokumen, periode pemilihan, waktu pembuatan, pembuat, status verifikasi, dan versi laporan.
+
+Batasi akses arsip sesuai role. Jika PDF disimpan di Supabase Storage, gunakan bucket privat dan URL bertanda tangan yang berumur terbatas jika diperlukan.
+
+Setelah hasil disahkan, sediakan mekanisme penguncian laporan agar revisi tidak mengubah dokumen yang sudah disahkan tanpa jejak audit.
+
+## 17. MENU PENGATURAN
+
+Buat halaman pengaturan yang profesional dan terbagi dalam beberapa bagian.
+
+### A. Identitas sekolah
+
+- Nama sekolah.
+- Logo sekolah.
+- Alamat sekolah.
+- Email atau informasi kontak jika diperlukan.
+- Nama kepala sekolah.
+- Nama ketua panitia.
+- Nama sekretaris panitia.
+
+### B. Periode pemilihan
+
+- Nama periode.
+- Tahun pelaksanaan.
+- Tanggal mulai.
+- Jam mulai.
+- Tanggal selesai.
+- Jam selesai.
+- Zona waktu, default `Asia/Makassar`.
+- Status pemilihan.
+- Status publikasi hasil.
+
+Backend harus memvalidasi waktu pemilihan. Jam perangkat siswa tidak boleh menjadi sumber waktu yang tepercaya.
+
+### C. Pengaturan suara
+
+- Menentukan kandidat aktif.
+- Menentukan siswa yang berhak memilih.
+- Mengunci pemilihan.
+- Mengakhiri pemilihan.
+- Mengatur publikasi hasil.
+
+Perubahan pengaturan yang berpengaruh pada integritas pemungutan suara harus memiliki batasan dan audit.
+
+### D. Akun administrator
+
+- Ganti username atau email login sesuai mekanisme autentikasi.
+- Ganti kata sandi.
+- Validasi kata sandi lama atau autentikasi ulang.
+- Konfirmasi perubahan.
+- Notifikasi keberhasilan atau kegagalan.
+
+### E. Penyimpanan
+
+- Upload logo.
+- Upload foto kandidat.
+- Validasi tipe file.
+- Validasi ukuran file.
+- Pratinjau gambar.
+- Penggantian file.
+- Penghapusan file dengan pemeriksaan relasi.
+
+Semua pengaturan harus tersimpan di database dan langsung digunakan pada bagian aplikasi yang relevan.
+
+## 18. STRUKTUR DATABASE SUPABASE
+
+Rancang skema database yang ternormalisasi dan dapat dikembangkan.
+
+Minimal mencakup tabel:
+
+1. `schools` — identitas sekolah.
+2. `elections` — periode dan konfigurasi pemilihan.
+3. `classes` — data kelas.
+4. `students` — data siswa.
+5. `voter_credentials` — hash token, status, masa berlaku, dan informasi rotasi token.
+6. `candidates` — data pasangan kandidat.
+7. `voter_participation` — status hak suara yang sudah digunakan.
+8. `ballots` — catatan pilihan kandidat tanpa identitas siswa langsung.
+9. `election_results` atau view agregat — hasil per kandidat sesuai kebutuhan.
+10. `admin_profiles` — profil dan role administrator yang terhubung ke Supabase Auth.
+11. `election_documents` — metadata berita acara dan arsip PDF.
+12. `audit_logs` — catatan aktivitas administratif yang aman.
+
+Relasi dan desain final dapat disesuaikan untuk menjamin integritas data dan kerahasiaan pilihan.
+
+### Constraint dan indeks
+
+Sertakan:
+- Primary key.
+- Foreign key.
+- Unique constraint.
+- Check constraint.
+- Indeks untuk pencarian dan relasi penting.
+- Constraint satu suara per pemilih per pemilihan.
+- Constraint nomor urut kandidat.
+- Validasi status dan rentang waktu.
+- Aturan penghapusan yang tidak merusak data historis.
+
+Jangan menghapus suara atau mengubah hasil secara diam-diam. Gunakan status, arsip, atau prosedur administratif yang terdokumentasi jika perubahan diperlukan.
+
+### Database migration
+
+Sediakan file migrasi SQL lengkap dan berurutan.
+
+Migrasi harus membuat tabel, relasi, constraint, indeks, RLS, policy, function, RPC, view agregat, trigger yang diperlukan, dan kebijakan Storage.
+
+Sertakan skrip atau petunjuk bootstrap data awal yang aman. Jangan memasukkan kredensial asli.
+
+## 19. SUPABASE STORAGE
+
+Buat bucket penyimpanan yang sesuai, misalnya:
+- `school-assets`
+- `candidate-photos`
+- `election-documents`
+
+Kebijakan:
+- Logo dan foto kandidat yang dipublikasikan dapat ditampilkan melalui URL yang sesuai.
+- Upload dan penghapusan dibatasi pada administrator yang berwenang.
+- Dokumen pemilihan dan kartu login tidak boleh tersedia melalui bucket publik tanpa alasan yang sah.
+- Validasi file pada backend.
+- Gunakan nama file yang aman dan hindari benturan nama.
+- Batasi ukuran file.
+- Jangan menyimpan token login siswa di nama file atau metadata publik.
+
+## 20. ROUTING DAN SESSION MANAGEMENT
+
+Gunakan Vue Router.
+
+Contoh route:
+- `/login/admin`
+- `/login/siswa`
+- `/admin/dashboard`
+- `/admin/kelas`
+- `/admin/siswa`
+- `/admin/kandidat`
+- `/admin/perolehan-suara`
+- `/admin/berita-acara`
+- `/admin/pengaturan`
+- `/siswa/dashboard`
+- `/siswa/pilih-kandidat`
+- `/hasil-pemilihan` jika hasil telah dipublikasikan.
+
+Terapkan route guard untuk mengarahkan pengguna yang belum terautentikasi dan membatasi akses berdasarkan role.
+
+Route guard hanya berfungsi sebagai lapisan navigasi. Semua operasi sensitif tetap harus divalidasi di backend.
+
+Ketentuan:
+- Sesi admin dan sesi siswa harus terpisah.
+- Siswa tidak dapat mengakses route admin.
+- Admin tidak dapat menggunakan sesi siswa sebagai sesi administrator.
+- Sesi siswa tidak dapat dipakai untuk membaca data siswa lain.
+- Logout mengakhiri sesi di server.
+- Sesi siswa berakhir otomatis sesuai kebijakan.
+- Setelah suara berhasil dikirim, sesi siswa harus dicabut atau diakhiri sebelum kembali ke login.
+
+## 21. AUDIT DAN TRANSPARANSI
+
+Catat aktivitas administratif yang penting:
+- Pembuatan dan perubahan data kelas.
+- Impor siswa.
+- Penerbitan dan rotasi token.
+- Pembuatan dan perubahan kandidat.
+- Perubahan jadwal.
+- Perubahan konfigurasi.
+- Penguncian dan pengakhiran pemilihan.
+- Pembuatan berita acara.
+- Pengesahan hasil jika fitur pengesahan disediakan.
+
+Audit log tidak boleh berisi:
+- Token mentah.
+- Kata sandi.
+- Secret key.
+- Pilihan kandidat yang dikaitkan dengan identitas siswa.
+
+Lindungi audit log dari perubahan oleh pengguna biasa. Batasi akses dan retensi sesuai kebijakan sekolah.
+
+## 22. STRUKTUR FOLDER PROYEK
+
+Buat struktur modular seperti berikut:
+
+```text
+e-voting-smpn1-sukamulia/
+├── public/
+│   └── favicon.svg
+├── src/
+│   ├── assets/
+│   ├── components/
+│   │   ├── layout/
+│   │   ├── dashboard/
+│   │   ├── students/
+│   │   ├── candidates/
+│   │   ├── voting/
+│   │   └── common/
+│   ├── layouts/
+│   ├── views/
+│   │   ├── auth/
+│   │   ├── admin/
+│   │   └── student/
+│   ├── router/
+│   ├── stores/
+│   ├── services/
+│   ├── composables/
+│   ├── utils/
+│   ├── styles/
+│   ├── App.vue
+│   └── main.js
+├── supabase/
+│   ├── migrations/
+│   ├── functions/
+│   └── seed.sql
+├── tests/
+├── .env.example
+├── .gitignore
+├── package.json
+├── vite.config.js
+└── README.md
+```
+
+Struktur dapat dikembangkan sesuai kebutuhan, tetapi tanggung jawab komponen, tampilan, autentikasi, dan akses database harus tetap terpisah.
+
+## 23. STANDAR KUALITAS KODE
+
+- Gunakan komponen Vue yang reusable.
+- Gunakan validasi input pada frontend dan backend.
+- Hindari duplikasi kode.
+- Hindari query database yang tidak perlu.
+- Gunakan pagination untuk tabel besar.
+- Terapkan loading, error, empty, dan success state.
+- Gunakan notifikasi yang konsisten.
+- Jangan menelan error secara diam-diam.
+- Jangan mencetak secret atau token pada console.
+- Hindari penggunaan `v-html` terhadap konten yang tidak tepercaya.
+- Gunakan parameter query yang aman.
+- Terapkan prinsip least privilege.
+- Pisahkan konfigurasi pengembangan dan produksi.
+- Sertakan dokumentasi konfigurasi dan troubleshooting.
+
+## 24. PENGUJIAN WAJIB
+
+Sebelum aplikasi dinyatakan selesai, lakukan pengujian berikut.
+
+### Pengujian autentikasi
+- Login admin benar dan salah.
+- Login siswa dengan token valid dan tidak valid.
+- Token yang dicabut tidak dapat digunakan.
+- Siswa nonaktif tidak dapat login untuk memilih.
+- Siswa tidak dapat membuka dashboard admin.
+- Logout mengakhiri sesi dengan benar.
+
+### Pengujian CRUD
+- Tambah, edit, lihat, dan hapus kelas.
+- Tambah, edit, dan nonaktifkan siswa.
+- Tambah, edit, dan kelola kandidat.
+- Upload dan penggantian gambar.
+- Validasi data duplikat.
+
+### Pengujian impor dan kartu login
+- Download template Excel.
+- Impor file valid.
+- Impor file dengan kolom tidak lengkap.
+- Deteksi NISN duplikat.
+- Deteksi kelas yang tidak terdaftar.
+- Pratinjau dan pembatalan impor.
+- Download kartu login PDF.
+- Penerbitan ulang token dan pencabutan token lama.
+- Pengunduhan kartu massal secara terotorisasi.
+
+### Pengujian voting
+- Siswa belum memilih dapat memilih satu kandidat.
+- Siswa yang sudah memilih tidak dapat memilih kembali.
+- Dua permintaan bersamaan tidak menghasilkan dua suara.
+- Refresh halaman tidak mengizinkan pemungutan suara ulang.
+- Pembukaan beberapa tab tidak melewati batas satu suara.
+- Manipulasi request langsung tidak melewati validasi backend.
+- Voting di luar jadwal ditolak.
+- Kandidat nonaktif tidak dapat dipilih.
+- Suara berhasil tercatat satu kali.
+- Pilihan suara tidak dapat dilihat admin bersama identitas siswa.
+- Pesan sukses tampil selama 4 detik dan sesi diakhiri.
+
+### Pengujian hasil dan berita acara
+- Total suara sesuai database.
+- Persentase dihitung dengan benar.
+- Grafik sesuai dengan tabel.
+- Kondisi nol suara tidak menyebabkan error.
+- Hasil seri ditampilkan dengan benar.
+- Berita acara PDF sesuai data aktual.
+- Dokumen PDF dapat dibuka dan dicetak.
+- Kolom yang belum diisi tidak diisi dengan data rekaan.
+- Arsip dokumen terlindungi.
+
+### Pengujian keamanan
+- Verifikasi RLS pada setiap tabel sensitif.
+- Verifikasi hak akses RPC.
+- Verifikasi kebijakan Storage.
+- Verifikasi tidak ada Service Role Key di frontend.
+- Verifikasi token dan password tidak tercatat dalam log.
+- Verifikasi transaksi voting dan constraint unik.
+- Verifikasi hak akses setelah logout atau pencabutan sesi.
+
+Sertakan hasil pengujian dan daftar skenario yang lulus atau gagal. Jangan mengklaim pengujian berhasil jika belum benar-benar dijalankan.
+
+## 25. HASIL AKHIR YANG WAJIB DIHASILKAN
+
+Hasil akhir proyek harus meliputi:
+
+1. Source code frontend Vue.js 3 + Vite yang lengkap.
+2. Seluruh komponen, halaman, layout, dan routing.
+3. Source code backend atau Supabase Edge Functions yang diperlukan.
+4. Migrasi SQL lengkap.
+5. Semua tabel, relasi, constraint, indeks, RLS policy, RPC, dan view.
+6. Kebijakan Supabase Storage.
+7. Login admin dan login siswa berbasis token.
+8. Dashboard administrator.
+9. CRUD kelas, siswa, dan kandidat.
+10. Template Excel siswa yang dapat diunduh.
+11. Fitur impor siswa yang lengkap.
+12. Fitur pembuatan dan pengunduhan kartu login siswa.
+13. Mekanisme voting satu kali yang divalidasi database.
+14. Grafik dan tabel perolehan suara.
+15. Generator berita acara PDF.
+16. Pengaturan identitas sekolah dan periode pemilihan.
+17. Audit log administratif.
+18. File `.env.example`.
+19. File `README.md` berisi petunjuk instalasi.
+20. Panduan konfigurasi Supabase dan Storage.
+21. Panduan menjalankan aplikasi secara lokal.
+22. Panduan deployment frontend dan backend.
+23. Daftar pengujian beserta hasil aktual.
+24. Penjelasan batasan keamanan dan prosedur operasional.
+
+Jika lingkungan pengembangan mendukung pembuatan file, buat seluruh file proyek dalam direktori yang terstruktur dan sediakan arsip ZIP yang benar-benar dapat diunduh. Sertakan juga template Excel terpisah apabila memungkinkan.
+
+## 26. URUTAN PELAKSANAAN
+
+Kerjakan proyek secara sistematis:
+
+Tahap 1 — Rancang arsitektur, skema database, model keamanan, dan alur pemungutan suara.
+
+Tahap 2 — Buat migrasi SQL, constraint, RLS, RPC, dan Storage policy.
+
+Tahap 3 — Implementasikan autentikasi admin dan siswa berbasis token.
+
+Tahap 4 — Bangun sistem desain, layout, sidebar, header, dan komponen reusable.
+
+Tahap 5 — Bangun dashboard dan seluruh modul CRUD.
+
+Tahap 6 — Implementasikan impor siswa, template Excel, penerbitan token, dan kartu login PDF.
+
+Tahap 7 — Implementasikan halaman kandidat dan transaksi voting yang aman.
+
+Tahap 8 — Implementasikan hasil agregat, grafik, dan berita acara PDF.
+
+Tahap 9 — Implementasikan pengaturan, audit log, dan pengamanan sesi.
+
+Tahap 10 — Jalankan pengujian, perbaiki bug, dokumentasikan instalasi, dan siapkan deployment.
+
+Jika hasil terlalu besar untuk satu respons, pecah pekerjaan menjadi beberapa bagian yang berurutan. Pertahankan konsistensi nama tabel, tipe data, fungsi, dan kontrak API pada seluruh bagian. Jangan mengganti source code dengan ringkasan atau contoh singkat.
+
+## 27. KRITERIA KEBERHASILAN
+
+Aplikasi hanya dapat dianggap selesai jika:
+
+- Tampilan premium dan responsif berfungsi di berbagai perangkat.
+- Semua menu utama dapat digunakan.
+- Data tersimpan dan dibaca dari Supabase.
+- Siswa login hanya dengan token.
+- Setiap siswa hanya dapat memberikan satu suara.
+- Integritas suara dijaga oleh database dan backend.
+- Admin tidak dapat menghubungkan identitas siswa dengan kandidat pilihannya.
+- Impor Excel dan kartu login siswa berfungsi.
+- Grafik hasil berasal dari data aktual.
+- Berita acara dapat diunduh sebagai PDF.
+- Logo, nama sekolah, dan periode tampil secara dinamis.
+- Tidak terdapat tombol penting yang sekadar dekorasi.
+- Dokumentasi instalasi tersedia.
+- Pengujian dan batasan implementasi dijelaskan secara jujur.
+
+**Mulailah dengan merancang arsitektur lengkap dan skema database yang aman. Setelah itu, implementasikan seluruh aplikasi secara bertahap hingga setiap fitur benar-benar berfungsi. Prioritaskan keamanan pemungutan suara, kerahasiaan pilihan, kemudahan administrasi, serta desain UI/UX yang elegan dan profesional.**
