@@ -218,17 +218,27 @@ export async function generateBeritaAcaraPDF(
   doc.text(school.committee_chair || 'Ahmad Fauzi, S.Pd.', col1X, currentY);
   doc.text(school.committee_secretary || 'Nurul Hidayati, S.Pd.', col2X, currentY);
 
+  doc.setFont('times', 'normal');
+  const chairNip = school.committee_chair_nip ? `NIP. ${school.committee_chair_nip}` : '';
+  const secNip = school.committee_secretary_nip ? `NIP. ${school.committee_secretary_nip}` : '';
+  if (chairNip || secNip) {
+    currentY += 4.5;
+    if (chairNip) doc.text(chairNip, col1X, currentY);
+    if (secNip) doc.text(secNip, col2X, currentY);
+  }
+
   // Acknowledged by Principal
-  currentY += 12;
+  currentY += 10;
   doc.setFont('times', 'normal');
   doc.text('Mengetahui,', pageWidth / 2, currentY, { align: 'center' });
-  doc.text('Kepala SMP Negeri 1 Sukamulia', pageWidth / 2, currentY + 4.5, { align: 'center' });
+  doc.text(`Kepala ${school.name || 'SMP Negeri 1 Sukamulia'}`, pageWidth / 2, currentY + 4.5, { align: 'center' });
 
   currentY += 21;
   doc.setFont('times', 'bold');
   doc.text(school.principal_name || 'Drs. H. M. Zainuddin, M.Pd.', pageWidth / 2, currentY, { align: 'center' });
   doc.setFont('times', 'normal');
-  doc.text('NIP. 19681231 199412 1 002', pageWidth / 2, currentY + 4.5, { align: 'center' });
+  const principalNip = school.principal_nip ? `NIP. ${school.principal_nip}` : 'NIP. 19681231 199412 1 002';
+  doc.text(principalNip, pageWidth / 2, currentY + 4.5, { align: 'center' });
 
   const fileName = `Berita_Acara_EVoting_SMPN1_Sukamulia_${election.academic_year.replace('/', '-')}.pdf`;
   if (saveToFile) {

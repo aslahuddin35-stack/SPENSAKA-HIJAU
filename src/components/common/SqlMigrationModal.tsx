@@ -43,11 +43,19 @@ CREATE TABLE IF NOT EXISTS public.schools (
     contact_phone VARCHAR(50) DEFAULT '(0376) 21123',
     contact_email VARCHAR(100) DEFAULT 'info@smpn1sukamulia.sch.id',
     principal_name VARCHAR(255) DEFAULT 'Drs. H. M. Zainuddin, M.Pd.',
+    principal_nip VARCHAR(100) DEFAULT '19681231 199412 1 002',
     committee_chair VARCHAR(255) DEFAULT 'Ahmad Fauzi, S.Pd.',
+    committee_chair_nip VARCHAR(100) DEFAULT '19850412 201001 1 015',
     committee_secretary VARCHAR(255) DEFAULT 'Nurul Hidayati, S.Pd.',
+    committee_secretary_nip VARCHAR(100) DEFAULT '19900825 201503 2 008',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Kolom NIP pejabat sekolah jika tabel sudah pernah dibuat sebelumnya
+ALTER TABLE IF EXISTS public.schools ADD COLUMN IF NOT EXISTS principal_nip VARCHAR(100);
+ALTER TABLE IF EXISTS public.schools ADD COLUMN IF NOT EXISTS committee_chair_nip VARCHAR(100);
+ALTER TABLE IF EXISTS public.schools ADD COLUMN IF NOT EXISTS committee_secretary_nip VARCHAR(100);
 
 CREATE TABLE IF NOT EXISTS public.elections (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -259,7 +267,7 @@ GRANT EXECUTE ON FUNCTION public.cast_student_vote TO anon, authenticated, postg
 
 -- 5. Data Awal (Seed Data)
 INSERT INTO public.schools (
-    id, name, logo_url, address, contact_phone, contact_email, principal_name, committee_chair, committee_secretary
+    id, name, logo_url, address, contact_phone, contact_email, principal_name, principal_nip, committee_chair, committee_chair_nip, committee_secretary, committee_secretary_nip
 ) VALUES (
     'a0000000-0000-0000-0000-000000000001',
     'SMP Negeri 1 Sukamulia',
@@ -268,12 +276,21 @@ INSERT INTO public.schools (
     '(0376) 21123',
     'info@smpn1sukamulia.sch.id',
     'Drs. H. M. Zainuddin, M.Pd.',
+    '19681231 199412 1 002',
     'Ahmad Fauzi, S.Pd.',
-    'Nurul Hidayati, S.Pd.'
+    '19850412 201001 1 015',
+    'Nurul Hidayati, S.Pd.',
+    '19900825 201503 2 008'
 ) ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     logo_url = EXCLUDED.logo_url,
-    address = EXCLUDED.address;
+    address = EXCLUDED.address,
+    principal_name = EXCLUDED.principal_name,
+    principal_nip = EXCLUDED.principal_nip,
+    committee_chair = EXCLUDED.committee_chair,
+    committee_chair_nip = EXCLUDED.committee_chair_nip,
+    committee_secretary = EXCLUDED.committee_secretary,
+    committee_secretary_nip = EXCLUDED.committee_secretary_nip;
 
 INSERT INTO public.elections (
     id, school_id, title, academic_year, start_time, end_time, timezone, status, is_published

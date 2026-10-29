@@ -31,8 +31,11 @@ const DEFAULT_SCHOOL: School = {
   contact_phone: '(0376) 21123',
   contact_email: 'info@smpn1sukamulia.sch.id',
   principal_name: 'Drs. H. M. Zainuddin, M.Pd.',
+  principal_nip: '19681231 199412 1 002',
   committee_chair: 'Ahmad Fauzi, S.Pd.',
+  committee_chair_nip: '19850412 201001 1 015',
   committee_secretary: 'Nurul Hidayati, S.Pd.',
+  committee_secretary_nip: '19900825 201503 2 008',
 };
 
 // Initial default election
@@ -425,8 +428,8 @@ class DatabaseService {
     rlsError?: boolean; 
   }> {
     try {
-      // 1. School
-      const sRes = await supabase.from('schools').upsert([{
+      // 1. School (with fallback if remote table does not yet have NIP columns)
+      const fullSchoolPayload = {
         id: this.school.id,
         name: this.school.name,
         logo_url: this.school.logo_url,
@@ -434,9 +437,27 @@ class DatabaseService {
         contact_phone: this.school.contact_phone,
         contact_email: this.school.contact_email,
         principal_name: this.school.principal_name,
+        principal_nip: this.school.principal_nip || null,
         committee_chair: this.school.committee_chair,
+        committee_chair_nip: this.school.committee_chair_nip || null,
         committee_secretary: this.school.committee_secretary,
-      }]);
+        committee_secretary_nip: this.school.committee_secretary_nip || null,
+      };
+
+      let sRes = await supabase.from('schools').upsert([fullSchoolPayload]);
+      if (sRes.error && (sRes.error.message.includes('column') || sRes.error.code === 'PGRST204')) {
+        sRes = await supabase.from('schools').upsert([{
+          id: this.school.id,
+          name: this.school.name,
+          logo_url: this.school.logo_url,
+          address: this.school.address,
+          contact_phone: this.school.contact_phone,
+          contact_email: this.school.contact_email,
+          principal_name: this.school.principal_name,
+          committee_chair: this.school.committee_chair,
+          committee_secretary: this.school.committee_secretary,
+        }]);
+      }
       if (sRes.error) {
         if (sRes.error.code === '42501') {
           this.isRlsBlocked = true;
@@ -652,7 +673,34 @@ class DatabaseService {
 
     if (this.tablesExistInSupabase) {
       try {
-        await supabase.from('schools').upsert([this.school]);
+        const fullPayload = {
+          id: this.school.id,
+          name: this.school.name,
+          logo_url: this.school.logo_url,
+          address: this.school.address,
+          contact_phone: this.school.contact_phone,
+          contact_email: this.school.contact_email,
+          principal_name: this.school.principal_name,
+          principal_nip: this.school.principal_nip || null,
+          committee_chair: this.school.committee_chair,
+          committee_chair_nip: this.school.committee_chair_nip || null,
+          committee_secretary: this.school.committee_secretary,
+          committee_secretary_nip: this.school.committee_secretary_nip || null,
+        };
+        const res = await supabase.from('schools').upsert([fullPayload]);
+        if (res.error && (res.error.message.includes('column') || res.error.code === 'PGRST204')) {
+          await supabase.from('schools').upsert([{
+            id: this.school.id,
+            name: this.school.name,
+            logo_url: this.school.logo_url,
+            address: this.school.address,
+            contact_phone: this.school.contact_phone,
+            contact_email: this.school.contact_email,
+            principal_name: this.school.principal_name,
+            committee_chair: this.school.committee_chair,
+            committee_secretary: this.school.committee_secretary,
+          }]);
+        }
       } catch (e) {
         console.warn('Supabase remote updateSchool notice:', e);
       }

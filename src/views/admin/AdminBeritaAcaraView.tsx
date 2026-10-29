@@ -488,20 +488,28 @@ export const AdminBeritaAcaraView: React.FC<Props> = ({ school, election }) => {
                 <p>Ketua Panitia Pemilihan,</p>
                 <div className="h-16" />
                 <p className="font-bold underline">{school.committee_chair}</p>
+                {school.committee_chair_nip && (
+                  <p className="text-[11px] text-slate-600">NIP. {school.committee_chair_nip}</p>
+                )}
               </div>
               <div>
                 <p>Sekretaris Panitia,</p>
                 <div className="h-16" />
                 <p className="font-bold underline">{school.committee_secretary}</p>
+                {school.committee_secretary_nip && (
+                  <p className="text-[11px] text-slate-600">NIP. {school.committee_secretary_nip}</p>
+                )}
               </div>
             </div>
 
             <div className="text-center mt-6">
               <p>Mengetahui,</p>
-              <p>Kepala SMP Negeri 1 Sukamulia</p>
+              <p>Kepala {school.name || 'SMP Negeri 1 Sukamulia'}</p>
               <div className="h-16" />
               <p className="font-bold underline">{school.principal_name}</p>
-              <p className="text-[11px] text-slate-600">NIP. 19681231 199412 1 002</p>
+              <p className="text-[11px] text-slate-600">
+                NIP. {school.principal_nip || '19681231 199412 1 002'}
+              </p>
             </div>
           </div>
         </div>

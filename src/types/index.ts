@@ -11,8 +11,11 @@ export interface School {
   contact_phone: string;
   contact_email: string;
   principal_name: string;
+  principal_nip?: string;
   committee_chair: string;
+  committee_chair_nip?: string;
   committee_secretary: string;
+  committee_secretary_nip?: string;
 }
 
 export type ElectionStatus = 'draft' | 'active' | 'paused' | 'closed';

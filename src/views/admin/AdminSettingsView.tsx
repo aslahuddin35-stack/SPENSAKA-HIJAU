@@ -285,34 +285,90 @@ export const AdminSettingsView: React.FC<Props> = ({
               </div>
             </div>
 
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Nama Kepala Sekolah:</label>
-              <input
-                type="text"
-                value={schoolForm.principal_name}
-                onChange={(e) => setSchoolForm({ ...schoolForm, principal_name: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 focus:bg-white transition text-slate-800"
-              />
+            {/* Kepala Sekolah */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+              <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">
+                Penanggung Jawab Sekolah
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Nama Kepala Sekolah:</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Drs. H. M. Zainuddin, M.Pd."
+                    value={schoolForm.principal_name}
+                    onChange={(e) => setSchoolForm({ ...schoolForm, principal_name: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 transition text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">NIP Kepala Sekolah:</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 19681231 199412 1 002"
+                    value={schoolForm.principal_nip || ''}
+                    onChange={(e) => setSchoolForm({ ...schoolForm, principal_nip: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 transition text-slate-800 font-mono"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Ketua Panitia:</label>
-                <input
-                  type="text"
-                  value={schoolForm.committee_chair}
-                  onChange={(e) => setSchoolForm({ ...schoolForm, committee_chair: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 focus:bg-white transition text-slate-800"
-                />
+            {/* Panitia Pemilihan (Ketua & Sekretaris) */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+              <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">
+                Panitia Pelaksana Pemilihan OSIS
+              </span>
+
+              {/* Ketua Panitia */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Nama Ketua Panitia:</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Ahmad Fauzi, S.Pd."
+                    value={schoolForm.committee_chair}
+                    onChange={(e) => setSchoolForm({ ...schoolForm, committee_chair: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 transition text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">NIP / NUPTK Ketua Panitia:</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 19850412 201001 1 015"
+                    value={schoolForm.committee_chair_nip || ''}
+                    onChange={(e) => setSchoolForm({ ...schoolForm, committee_chair_nip: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 transition text-slate-800 font-mono"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Sekretaris Panitia:</label>
-                <input
-                  type="text"
-                  value={schoolForm.committee_secretary}
-                  onChange={(e) => setSchoolForm({ ...schoolForm, committee_secretary: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 focus:bg-white transition text-slate-800"
-                />
+
+              {/* Sekretaris Panitia */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Nama Sekretaris Panitia:</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Nurul Hidayati, S.Pd."
+                    value={schoolForm.committee_secretary}
+                    onChange={(e) => setSchoolForm({ ...schoolForm, committee_secretary: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 transition text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">NIP / NUPTK Sekretaris Panitia:</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 19900825 201503 2 008"
+                    value={schoolForm.committee_secretary_nip || ''}
+                    onChange={(e) => setSchoolForm({ ...schoolForm, committee_secretary_nip: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 transition text-slate-800 font-mono"
+                  />
+                </div>
               </div>
             </div>
 
