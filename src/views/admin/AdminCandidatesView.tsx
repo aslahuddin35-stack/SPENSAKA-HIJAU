@@ -20,12 +20,15 @@ import { Candidate, Election } from '../../types';
 import { db } from '../../services/db';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { CandidatePhoto } from '../../components/common/CandidatePhoto';
+import { ProgressModal, ProgressStep, ProgressResultSummary } from '../../components/common/ProgressModal';
 import { 
   formatCandidateImageUrl, 
   isGoogleDriveUrl, 
   extractGoogleDriveFileId, 
   DEFAULT_CANDIDATE_PHOTO 
 } from '../../utils/imageUrl';
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 interface Props {
   election: Election;
@@ -41,6 +44,29 @@ export const AdminCandidatesView: React.FC<Props> = ({ election }) => {
   const [candidateToDelete, setCandidateToDelete] = useState<Candidate | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Progress Modal State for Operations
+  const [progressModal, setProgressModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    subtitle?: string;
+    icon?: 'settings' | 'excel' | 'database' | 'trash' | 'user' | 'printer';
+    steps: ProgressStep[];
+    progressPercent: number;
+    currentDetail?: string;
+    status: 'running' | 'completed' | 'error';
+    errorMessage?: string;
+    resultSummary?: ProgressResultSummary;
+  }>({
+    isOpen: false,
+    title: '',
+    subtitle: '',
+    icon: 'user',
+    steps: [],
+    progressPercent: 0,
+    currentDetail: '',
+    status: 'running',
+  });
 
   const [formData, setFormData] = useState<{
     ballot_number: number;
@@ -181,30 +207,79 @@ export const AdminCandidatesView: React.FC<Props> = ({ election }) => {
       return;
     }
 
+    const isEditing = !!editingCandidate;
+    setIsModalOpen(false);
+
+    setProgressModal({
+      isOpen: true,
+      title: isEditing ? 'Menyimpan Perubahan Pasangan Calon' : 'Mendaftarkan Pasangan Calon Baru',
+      subtitle: `Nomor Urut ${formData.ballot_number}: ${formData.leader_name} & ${formData.vice_leader_name}`,
+      icon: 'user',
+      status: 'running',
+      progressPercent: 25,
+      currentDetail: 'Memvalidasi data calon dan url foto kandidat...',
+      steps: [
+        { id: '1', label: 'Validasi form & format tautan foto kandidat', status: 'running' },
+        { id: '2', label: isEditing ? 'Memperbarui visi, misi, dan profil paslon' : 'Mendaftarkan nomor urut & data calon', status: 'pending' },
+        { id: '3', label: 'Sinkronisasi ke basis data lokal & Supabase', status: 'pending' },
+      ],
+    });
+
     const payload = {
       ...formData,
       photo_url: formData.photo_url ? formatCandidateImageUrl(formData.photo_url) : formData.photo_url,
     };
 
     try {
-      if (editingCandidate) {
+      await sleep(250);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 60,
+        currentDetail: 'Menyimpan profil pasangan calon...',
+        steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+      }));
+
+      if (isEditing && editingCandidate) {
         const res = await db.updateCandidate(editingCandidate.id, payload);
         if (!res.success) {
-          showNotification('error', res.message || 'Gagal memperbarui kandidat');
-          return;
+          throw new Error(res.message || 'Gagal memperbarui kandidat');
         }
-        showNotification('success', `Data pasangan calon nomor ${formData.ballot_number} berhasil diperbarui`);
       } else {
         const res = await db.addCandidate(payload);
         if (!res.success) {
-          showNotification('error', res.message || 'Gagal menambahkan kandidat');
-          return;
+          throw new Error(res.message || 'Gagal menambahkan kandidat');
         }
-        showNotification('success', `Pasangan calon nomor ${formData.ballot_number} berhasil didaftarkan`);
       }
-      setIsModalOpen(false);
+
+      await sleep(250);
       loadCandidates();
+
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 100,
+        status: 'completed',
+        currentDetail: isEditing ? 'Data paslon berhasil diperbarui!' : 'Paslon baru berhasil didaftarkan!',
+        steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+        resultSummary: {
+          title: isEditing ? 'Pembaruan Paslon Berhasil' : 'Pendaftaran Paslon Sukses',
+          items: [
+            { label: 'Nomor Urut', value: `Paslon #${formData.ballot_number}`, badge: 'Aktif' },
+            { label: 'Ketua OSIS', value: formData.leader_name },
+            { label: 'Wakil Ketua', value: formData.vice_leader_name },
+            { label: 'Status Surat Suara', value: 'Muncul di Bilik Suara' },
+          ],
+          note: 'Foto dan visi-misi pasangan calon akan otomatis tampil di layar pemungutan suara siswa.',
+        },
+      }));
+
+      showNotification('success', isEditing ? `Data paslon nomor ${formData.ballot_number} berhasil diperbarui` : `Pasangan calon nomor ${formData.ballot_number} berhasil didaftarkan`);
     } catch (err: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: err?.message || 'Terjadi kesalahan sistem',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', err?.message || 'Terjadi kesalahan sistem');
     }
   };
@@ -216,21 +291,70 @@ export const AdminCandidatesView: React.FC<Props> = ({ election }) => {
 
   const handleExecuteDelete = async () => {
     if (!candidateToDelete) return;
-    setIsDeleting(true);
+    setIsDeleteModalOpen(false);
+
+    setProgressModal({
+      isOpen: true,
+      title: 'Menghapus Pasangan Calon',
+      subtitle: `Nomor Urut ${candidateToDelete.ballot_number}: ${candidateToDelete.leader_name} & ${candidateToDelete.vice_leader_name}`,
+      icon: 'trash',
+      status: 'running',
+      progressPercent: 30,
+      currentDetail: 'Menghapus pasangan calon dari sistem...',
+      steps: [
+        { id: '1', label: 'Verifikasi status kandidat', status: 'running' },
+        { id: '2', label: 'Menghapus data calon dari database awan Supabase', status: 'pending' },
+        { id: '3', label: 'Memperbarui daftar surat suara', status: 'pending' },
+      ],
+    });
 
     try {
+      await sleep(250);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 70,
+        currentDetail: 'Menghapus paslon dari cloud database...',
+        steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+      }));
+
       const res = await db.deleteCandidate(candidateToDelete.id);
+      await sleep(200);
+
       if (res.success) {
-        showNotification('success', res.message);
         loadCandidates();
-        setIsDeleteModalOpen(false);
+        setProgressModal(prev => ({
+          ...prev,
+          progressPercent: 100,
+          status: 'completed',
+          currentDetail: 'Pasangan calon berhasil dihapus!',
+          steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+          resultSummary: {
+            title: 'Penghapusan Paslon Selesai',
+            items: [
+              { label: 'Nomor Urut Dihapus', value: `#${candidateToDelete.ballot_number}`, badge: 'Dihapus' },
+              { label: 'Pasangan', value: `${candidateToDelete.leader_name} & ${candidateToDelete.vice_leader_name}` },
+            ],
+            note: 'Pasangan calon telah dikeluarkan dari daftar surat suara bilik suara.',
+          },
+        }));
+        showNotification('success', res.message);
       } else {
+        setProgressModal(prev => ({
+          ...prev,
+          status: 'error',
+          errorMessage: res.message,
+          steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+        }));
         showNotification('error', res.message);
       }
     } catch (e: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: e?.message || 'Gagal menghapus kandidat',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', e?.message || 'Gagal menghapus kandidat');
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -704,6 +828,21 @@ export const AdminCandidatesView: React.FC<Props> = ({ election }) => {
         isLoading={isDeleting}
         onConfirm={handleExecuteDelete}
         onCancel={() => setIsDeleteModalOpen(false)}
+      />
+
+      {/* Progress Notification Modal for Candidate Operations */}
+      <ProgressModal
+        isOpen={progressModal.isOpen}
+        title={progressModal.title}
+        subtitle={progressModal.subtitle}
+        icon={progressModal.icon}
+        steps={progressModal.steps}
+        progressPercent={progressModal.progressPercent}
+        currentDetail={progressModal.currentDetail}
+        status={progressModal.status}
+        errorMessage={progressModal.errorMessage}
+        resultSummary={progressModal.resultSummary}
+        onClose={() => setProgressModal(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

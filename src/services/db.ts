@@ -929,7 +929,7 @@ class DatabaseService {
     return { success: true, student: newStudent };
   }
 
-  public async updateStudent(id: string, data: Partial<Student>): Promise<{ success: boolean; message?: string }> {
+  public async updateStudent(id: string, data: Partial<Student>): Promise<{ success: boolean; student?: Student; message?: string }> {
     const idx = this.students.findIndex(s => s.id === id);
     if (idx === -1) return { success: false, message: 'Siswa tidak ditemukan' };
 
@@ -967,7 +967,7 @@ class DatabaseService {
     this.students[idx] = { ...this.students[idx], ...data, updated_at: new Date().toISOString() };
     this.saveToLocalStorage();
     this.addAuditLog('EDIT_SISWA', 'Administrator', `Memperbarui siswa ${this.students[idx].full_name}`);
-    return { success: true };
+    return { success: true, student: this.students[idx] };
   }
 
   public async deleteStudent(id: string): Promise<{ success: boolean; message: string }> {
@@ -1148,21 +1148,45 @@ class DatabaseService {
     return { success: true, newToken };
   }
 
-  public async importStudents(items: Array<{
-    nisn: string;
-    full_name: string;
-    class_name: string;
-    birth_date?: string;
-    gender?: 'L' | 'P';
-  }>): Promise<{ importedCount: number; skippedCount: number; errors: string[] }> {
+  public async importStudents(
+    items: Array<{
+      nisn: string;
+      full_name: string;
+      class_name: string;
+      birth_date?: string;
+      gender?: 'L' | 'P';
+    }>,
+    onProgress?: (info: {
+      current: number;
+      total: number;
+      percent: number;
+      currentItem: string;
+      stage: string;
+    }) => void
+  ): Promise<{ importedCount: number; skippedCount: number; errors: string[] }> {
     let imported = 0;
     let skipped = 0;
     const errors: string[] = [];
+    const total = items.length;
 
+    let idx = 0;
     for (const item of items) {
+      idx++;
       const trimmedNisn = String(item.nisn || '').trim();
       const trimmedName = String(item.full_name || '').trim();
       const trimmedClass = String(item.class_name || '').trim();
+
+      if (onProgress) {
+        onProgress({
+          current: idx,
+          total,
+          percent: Math.round((idx / total) * 100),
+          currentItem: trimmedName || `Baris ${idx}`,
+          stage: `Memvalidasi & menerbitkan token: ${trimmedName || 'Siswa'} (${trimmedClass || '-'})`,
+        });
+        // short tick to let browser redraw progress state
+        await new Promise(r => setTimeout(r, 12));
+      }
 
       if (!trimmedNisn || !trimmedName) {
         skipped++;

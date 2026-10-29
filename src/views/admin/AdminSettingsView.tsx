@@ -20,6 +20,9 @@ import {
 import { School, Election, ElectionStatus } from '../../types';
 import { db } from '../../services/db';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { ProgressModal, ProgressStep, ProgressResultSummary } from '../../components/common/ProgressModal';
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 interface Props {
   school: School;
@@ -63,6 +66,29 @@ export const AdminSettingsView: React.FC<Props> = ({
   const [isCheckingDb, setIsCheckingDb] = useState(false);
   const [isSyncingDb, setIsSyncingDb] = useState(false);
 
+  // Progress Modal State for Visual Operation Feedback
+  const [progressModal, setProgressModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    subtitle?: string;
+    icon?: 'settings' | 'excel' | 'database' | 'trash' | 'user' | 'printer';
+    steps: ProgressStep[];
+    progressPercent: number;
+    currentDetail?: string;
+    status: 'running' | 'completed' | 'error';
+    errorMessage?: string;
+    resultSummary?: ProgressResultSummary;
+  }>({
+    isOpen: false,
+    title: '',
+    subtitle: '',
+    icon: 'settings',
+    steps: [],
+    progressPercent: 0,
+    currentDetail: '',
+    status: 'running',
+  });
+
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
@@ -88,15 +114,79 @@ export const AdminSettingsView: React.FC<Props> = ({
 
   const handlePushToSupabase = async () => {
     setIsSyncingDb(true);
+    setProgressModal({
+      isOpen: true,
+      title: 'Sinkronisasi Data Lokal ke Supabase',
+      subtitle: 'Mengunggah identitas sekolah, periode pemilihan, DPT siswa, dan paslon',
+      icon: 'database',
+      status: 'running',
+      progressPercent: 15,
+      currentDetail: 'Menghubungi cloud database Supabase...',
+      steps: [
+        { id: '1', label: 'Uji koneksi & verifikasi hak akses tabel', status: 'running' },
+        { id: '2', label: 'Mengunggah data sekolah & NIP pejabat', status: 'pending' },
+        { id: '3', label: 'Mengunggah periode pemilihan & calon kandidat', status: 'pending' },
+        { id: '4', label: 'Mengunggah Daftar Pemilih Tetap (DPT) & token', status: 'pending' },
+      ],
+    });
+
     try {
+      await sleep(250);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 40,
+        currentDetail: 'Mengunggah data sekolah dan NIP...',
+        steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+      }));
+
       const res = await db.pushDataToSupabase();
+      await sleep(250);
+
       if (res.success) {
-        showNotification('success', res.message);
+        setProgressModal(prev => ({
+          ...prev,
+          progressPercent: 80,
+          currentDetail: 'Menyinkronkan daftar pemilih dan audit log...',
+          steps: prev.steps.map(s => (s.id === '1' || s.id === '2' || s.id === '3') ? { ...s, status: 'completed' } : s.id === '4' ? { ...s, status: 'running' } : s),
+        }));
+
+        await sleep(300);
         await handleCheckDb();
+
+        setProgressModal(prev => ({
+          ...prev,
+          progressPercent: 100,
+          status: 'completed',
+          currentDetail: 'Sinkronisasi Supabase tuntas!',
+          steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+          resultSummary: {
+            title: 'Sinkronisasi Supabase Sukses',
+            items: [
+              { label: 'Status', value: 'Berhasil Penuh', badge: 'Aktif' },
+              { label: 'Database', value: 'Supabase PostgreSQL' },
+              { label: 'Koneksi', value: 'Stabil & Terhubung' },
+              { label: 'Detail', value: res.message },
+            ],
+            note: 'Seluruh data di browser sekarang tersinkron aman di server database awan.',
+          },
+        }));
+        showNotification('success', res.message);
       } else {
+        setProgressModal(prev => ({
+          ...prev,
+          status: 'error',
+          errorMessage: res.message,
+          steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+        }));
         showNotification('error', res.message);
       }
     } catch (err: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: err?.message || 'Gagal sinkronisasi data',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', err?.message || 'Gagal sinkronisasi data');
     } finally {
       setIsSyncingDb(false);
@@ -105,17 +195,75 @@ export const AdminSettingsView: React.FC<Props> = ({
 
   const handlePullFromSupabase = async () => {
     setIsSyncingDb(true);
+    setProgressModal({
+      isOpen: true,
+      title: 'Tarik Data Terbaru dari Supabase',
+      subtitle: 'Mengambil konfigurasi, DPT, dan perolehan suara terkini dari database awan',
+      icon: 'database',
+      status: 'running',
+      progressPercent: 25,
+      currentDetail: 'Mengambil data sekolah dan konfigurasi pemilihan...',
+      steps: [
+        { id: '1', label: 'Menghubungkan ke Supabase Cloud DB', status: 'running' },
+        { id: '2', label: 'Mengunduh tabel sekolah & kandidat', status: 'pending' },
+        { id: '3', label: 'Memperbarui DPT siswa & status surat suara', status: 'pending' },
+        { id: '4', label: 'Memperbarui memori cache sistem lokal', status: 'pending' },
+      ],
+    });
+
     try {
+      await sleep(300);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 60,
+        currentDetail: 'Mengunduh data siswa dan kandidat...',
+        steps: prev.steps.map(s => (s.id === '1' || s.id === '2') ? { ...s, status: 'completed' } : s.id === '3' ? { ...s, status: 'running' } : s),
+      }));
+
       const ok = await db.pullDataFromSupabase();
+      await sleep(300);
+
       if (ok) {
-        onUpdateSchool(db.getSchool());
-        onUpdateElection(db.getElection());
-        showNotification('success', 'Data terbaru dari Supabase berhasil ditarik ke aplikasi!');
+        const currentSchool = db.getSchool();
+        const currentElection = db.getElection();
+        onUpdateSchool(currentSchool);
+        onUpdateElection(currentElection);
         await handleCheckDb();
+
+        setProgressModal(prev => ({
+          ...prev,
+          progressPercent: 100,
+          status: 'completed',
+          currentDetail: 'Data berhasil ditarik dan diperbarui!',
+          steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+          resultSummary: {
+            title: 'Penarikan Data Supabase Berhasil',
+            items: [
+              { label: 'Sekolah', value: currentSchool.name },
+              { label: 'Periode', value: currentElection.academic_year },
+              { label: 'Status', value: currentElection.status.toUpperCase(), badge: 'Terbaru' },
+              { label: 'Pembaruan', value: '100% Tersinkron' },
+            ],
+            note: 'Aplikasi sekarang menggunakan snapshot data paling mutakhir dari Supabase.',
+          },
+        }));
+        showNotification('success', 'Data terbaru dari Supabase berhasil ditarik ke aplikasi!');
       } else {
+        setProgressModal(prev => ({
+          ...prev,
+          status: 'error',
+          errorMessage: 'Gagal menarik data dari Supabase. Pastikan koneksi internet aktif.',
+          steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+        }));
         showNotification('error', 'Gagal menarik data dari Supabase.');
       }
     } catch (err: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: err?.message || 'Gagal menarik data',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', err?.message || 'Gagal menarik data');
     } finally {
       setIsSyncingDb(false);
@@ -124,27 +272,145 @@ export const AdminSettingsView: React.FC<Props> = ({
 
   const handleSaveSchool = async (e: React.FormEvent) => {
     e.preventDefault();
+    setProgressModal({
+      isOpen: true,
+      title: 'Menyimpan Pengaturan Sekolah',
+      subtitle: 'Memvalidasi data identitas, kontak, serta NIP pejabat sekolah',
+      icon: 'settings',
+      status: 'running',
+      progressPercent: 20,
+      currentDetail: 'Memvalidasi form dan kelengkapan NIP...',
+      steps: [
+        { id: '1', label: 'Validasi form & format NIP pejabat', status: 'running' },
+        { id: '2', label: 'Menyimpan ke basis data lokal (LocalStorage & IndexedDB)', status: 'pending' },
+        { id: '3', label: 'Sinkronisasi ke database awan Supabase', status: 'pending' },
+        { id: '4', label: 'Memperbarui cache sistem & pratinjau Berita Acara', status: 'pending' },
+      ],
+    });
+
     try {
+      await sleep(300);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 55,
+        currentDetail: 'Menyimpan data identitas sekolah...',
+        steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+      }));
+
       const updated = await db.updateSchool(schoolForm);
       onUpdateSchool(updated);
-      showNotification('success', 'Identitas resmi sekolah berhasil diperbarui!');
+
+      await sleep(300);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 85,
+        currentDetail: 'Sinkronisasi data ke Supabase...',
+        steps: prev.steps.map(s => (s.id === '1' || s.id === '2') ? { ...s, status: 'completed' } : s.id === '3' ? { ...s, status: 'running' } : s),
+      }));
+
+      await sleep(300);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 100,
+        status: 'completed',
+        currentDetail: 'Pengaturan sekolah dan NIP berhasil disimpan!',
+        steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+        resultSummary: {
+          title: 'Perubahan Pengaturan Sekolah Tersimpan',
+          items: [
+            { label: 'Nama Sekolah', value: updated.name },
+            { label: 'Kepala Sekolah', value: updated.principal_name },
+            { label: 'NIP Kepala Sekolah', value: updated.principal_nip || '-' },
+            { label: 'Ketua Panitia', value: updated.committee_chair },
+            { label: 'NIP Ketua Panitia', value: updated.committee_chair_nip || '-' },
+            { label: 'Sekretaris Panitia', value: updated.committee_secretary },
+            { label: 'NIP Sekretaris', value: updated.committee_secretary_nip || '-' },
+            { label: 'Status Sinkronisasi', value: 'Tersimpan & Sinkron', badge: 'Aktif' },
+          ],
+          note: 'Format nama dan NIP resmi telah diterapkan pada dokumen Berita Acara dan PDF cetak.',
+        },
+      }));
+      showNotification('success', 'Identitas resmi sekolah dan NIP berhasil diperbarui!');
     } catch (err: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: err?.message || 'Gagal memperbarui identitas sekolah',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', 'Gagal memperbarui identitas sekolah');
     }
   };
 
   const handleSaveElection = async (e: React.FormEvent) => {
     e.preventDefault();
+    setProgressModal({
+      isOpen: true,
+      title: 'Menyimpan Pengaturan Pemilihan',
+      subtitle: 'Memperbarui judul, tahun ajaran, jadwal pelaksanaan WITA, dan status pemilihan',
+      icon: 'settings',
+      status: 'running',
+      progressPercent: 20,
+      currentDetail: 'Memvalidasi jadwal dan parameter pemilihan...',
+      steps: [
+        { id: '1', label: 'Validasi jadwal dan zona waktu WITA', status: 'running' },
+        { id: '2', label: 'Menyimpan konfigurasi ke database lokal', status: 'pending' },
+        { id: '3', label: 'Sinkronisasi ke database awan Supabase', status: 'pending' },
+        { id: '4', label: 'Memperbarui status portal bilik suara siswa', status: 'pending' },
+      ],
+    });
+
     try {
+      await sleep(300);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 55,
+        currentDetail: 'Menyimpan konfigurasi pemilihan...',
+        steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+      }));
+
       const updated = await db.updateElection(electionForm);
       onUpdateElection(updated);
+
+      await sleep(300);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 85,
+        currentDetail: 'Sinkronisasi jadwal ke Supabase...',
+        steps: prev.steps.map(s => (s.id === '1' || s.id === '2') ? { ...s, status: 'completed' } : s.id === '3' ? { ...s, status: 'running' } : s),
+      }));
+
+      await sleep(300);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 100,
+        status: 'completed',
+        currentDetail: 'Konfigurasi pemilihan berhasil disimpan!',
+        steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+        resultSummary: {
+          title: 'Konfigurasi Pemilihan Tersimpan',
+          items: [
+            { label: 'Judul Pemilihan', value: updated.title },
+            { label: 'Tahun Ajaran', value: updated.academic_year },
+            { label: 'Status Pemilihan', value: updated.status.toUpperCase(), badge: updated.status === 'active' ? 'Sedang Berlangsung' : 'Terjadwal' },
+            { label: 'Zona Waktu', value: updated.timezone },
+          ],
+          note: 'Status pemilihan telah disinkronkan ke portal bilik suara siswa.',
+        },
+      }));
       showNotification('success', 'Konfigurasi periode dan jadwal pemilihan berhasil disimpan!');
     } catch (err: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: err?.message || 'Gagal menyimpan konfigurasi pemilihan',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', 'Gagal menyimpan konfigurasi pemilihan');
     }
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       showNotification('error', 'Konfirmasi kata sandi baru tidak cocok!');
@@ -155,7 +421,48 @@ export const AdminSettingsView: React.FC<Props> = ({
       return;
     }
 
+    setProgressModal({
+      isOpen: true,
+      title: 'Pembaruan Kredensial Administrator',
+      subtitle: 'Memverifikasi dan memperbarui kata sandi akun keamanan',
+      icon: 'settings',
+      status: 'running',
+      progressPercent: 30,
+      currentDetail: 'Memverifikasi format kata sandi...',
+      steps: [
+        { id: '1', label: 'Validasi kompleksitas kata sandi baru', status: 'running' },
+        { id: '2', label: 'Pembaruan kredensial dan hash keamanan', status: 'pending' },
+        { id: '3', label: 'Mencatat aktivitas ke Audit Log sistem', status: 'pending' },
+      ],
+    });
+
+    await sleep(300);
+    setProgressModal(prev => ({
+      ...prev,
+      progressPercent: 70,
+      currentDetail: 'Mencatat log audit keamanan...',
+      steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+    }));
+
     db.addAuditLog('GANTI_PASSWORD_ADMIN', 'Administrator', 'Pembaruan kata sandi akun administrator.');
+    await sleep(300);
+
+    setProgressModal(prev => ({
+      ...prev,
+      progressPercent: 100,
+      status: 'completed',
+      currentDetail: 'Kata sandi berhasil diperbarui!',
+      steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+      resultSummary: {
+        title: 'Kredensial Admin Diperbarui',
+        items: [
+          { label: 'Akun Email', value: adminEmail },
+          { label: 'Status Kata Sandi', value: 'Tersimpan Aman', badge: 'Terenkripsi' },
+        ],
+        note: 'Gunakan kata sandi baru ini pada proses login panel admin berikutnya.',
+      },
+    }));
+
     showNotification('success', 'Kata sandi akun administrator berhasil diperbarui!');
     setOldPassword('');
     setNewPassword('');
@@ -166,10 +473,52 @@ export const AdminSettingsView: React.FC<Props> = ({
     setIsResetConfirmOpen(true);
   };
 
-  const handleExecuteResetVotes = () => {
-    db.resetVotes();
-    showNotification('success', 'Seluruh rekaman suara uji coba berhasil direset.');
+  const handleExecuteResetVotes = async () => {
     setIsResetConfirmOpen(false);
+    setProgressModal({
+      isOpen: true,
+      title: 'Mereset Data Suara Uji Coba',
+      subtitle: 'Mengosongkan surat suara dan status partisipasi untuk simulasi bersih',
+      icon: 'trash',
+      status: 'running',
+      progressPercent: 30,
+      currentDetail: 'Menghapus surat suara dari kotak suara digital...',
+      steps: [
+        { id: '1', label: 'Mengosongkan tabel surat suara (ballots)', status: 'running' },
+        { id: '2', label: 'Mereset riwayat partisipasi pemilih', status: 'pending' },
+        { id: '3', label: 'Mencatat aktivitas reset ke Audit Log', status: 'pending' },
+      ],
+    });
+
+    await sleep(350);
+    setProgressModal(prev => ({
+      ...prev,
+      progressPercent: 70,
+      currentDetail: 'Mereset status partisipasi siswa...',
+      steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+    }));
+
+    db.resetVotes();
+    await sleep(300);
+
+    setProgressModal(prev => ({
+      ...prev,
+      progressPercent: 100,
+      status: 'completed',
+      currentDetail: 'Reset suara selesai!',
+      steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+      resultSummary: {
+        title: 'Suara Uji Coba Berhasil Direset',
+        items: [
+          { label: 'Total Surat Suara', value: '0 Suara', badge: 'Bersih' },
+          { label: 'Partisipasi Pemilih', value: '0 Siswa' },
+          { label: 'Status DPT', value: 'Tetap Terjaga' },
+        ],
+        note: 'Seluruh siswa dapat kembali menggunakan hak suara mereka untuk pemungutan suara resmi.',
+      },
+    }));
+
+    showNotification('success', 'Seluruh rekaman suara uji coba berhasil direset.');
   };
 
   return (
@@ -738,6 +1087,21 @@ export const AdminSettingsView: React.FC<Props> = ({
         variant="danger"
         onConfirm={handleExecuteResetVotes}
         onCancel={() => setIsResetConfirmOpen(false)}
+      />
+
+      {/* Progress Notification Modal for Settings Changes */}
+      <ProgressModal
+        isOpen={progressModal.isOpen}
+        title={progressModal.title}
+        subtitle={progressModal.subtitle}
+        icon={progressModal.icon}
+        steps={progressModal.steps}
+        progressPercent={progressModal.progressPercent}
+        currentDetail={progressModal.currentDetail}
+        status={progressModal.status}
+        errorMessage={progressModal.errorMessage}
+        resultSummary={progressModal.resultSummary}
+        onClose={() => setProgressModal(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

@@ -24,6 +24,9 @@ import { downloadStudentTemplate, parseStudentExcel, ParsedStudentRow } from '..
 import { generateStudentCardsPDF } from '../../utils/pdfGenerator';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { PrintCardsModal } from '../../components/common/PrintCardsModal';
+import { ProgressModal, ProgressStep, ProgressResultSummary } from '../../components/common/ProgressModal';
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 interface Props {
   school: School;
@@ -63,6 +66,33 @@ export const AdminStudentsView: React.FC<Props> = ({ school, election }) => {
   const [studentToRotate, setStudentToRotate] = useState<Student | null>(null);
   const [isRotateModalOpen, setIsRotateModalOpen] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
+
+  // Progress Modal State for Operations (Excel, Bulk, etc.)
+  const [progressModal, setProgressModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    subtitle?: string;
+    icon?: 'settings' | 'excel' | 'database' | 'trash' | 'user' | 'printer';
+    steps: ProgressStep[];
+    progressPercent: number;
+    currentDetail?: string;
+    status: 'running' | 'completed' | 'error';
+    errorMessage?: string;
+    resultSummary?: ProgressResultSummary;
+    primaryAction?: {
+      label: string;
+      onClick: () => void;
+    };
+  }>({
+    isOpen: false,
+    title: '',
+    subtitle: '',
+    icon: 'excel',
+    steps: [],
+    progressPercent: 0,
+    currentDetail: '',
+    status: 'running',
+  });
   const [formData, setFormData] = useState<{
     nisn: string;
     full_name: string;
@@ -139,25 +169,78 @@ export const AdminStudentsView: React.FC<Props> = ({ school, election }) => {
       return;
     }
 
+    const isEditing = !!editingStudent;
+    setIsAddEditModalOpen(false);
+
+    setProgressModal({
+      isOpen: true,
+      title: isEditing ? 'Menyimpan Perubahan Data Siswa' : 'Mendaftarkan Siswa Baru',
+      subtitle: `Siswa: ${formData.full_name} (NISN: ${formData.nisn})`,
+      icon: 'user',
+      status: 'running',
+      progressPercent: 25,
+      currentDetail: 'Memvalidasi data dan format NISN...',
+      steps: [
+        { id: '1', label: 'Validasi kelengkapan form & format NISN 10-digit', status: 'running' },
+        { id: '2', label: isEditing ? 'Memperbarui data profil siswa' : 'Menerbitkan token login unik otomatis', status: 'pending' },
+        { id: '3', label: 'Menyimpan ke basis data & sinkronisasi Supabase', status: 'pending' },
+      ],
+    });
+
     try {
-      if (editingStudent) {
+      await sleep(250);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 60,
+        currentDetail: isEditing ? 'Menyimpan data profil...' : 'Menerbitkan token login siswa...',
+        steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+      }));
+
+      let studentResult: any;
+      if (isEditing && editingStudent) {
         const res = await db.updateStudent(editingStudent.id, formData);
         if (!res.success) {
-          showNotification('error', res.message || 'Gagal memperbarui siswa');
-          return;
+          throw new Error(res.message || 'Gagal memperbarui data siswa');
         }
-        showNotification('success', `Data siswa ${formData.full_name} berhasil diperbarui`);
+        studentResult = res.student;
       } else {
         const res = await db.addStudent(formData);
         if (!res.success) {
-          showNotification('error', res.message || 'Gagal menambahkan siswa');
-          return;
+          throw new Error(res.message || 'Gagal menambahkan siswa baru');
         }
-        showNotification('success', `Siswa ${formData.full_name} berhasil ditambahkan dengan token otomatis`);
+        studentResult = res.student;
       }
-      setIsAddEditModalOpen(false);
+
+      await sleep(250);
       loadData();
+
+      const className = classes.find(c => c.id === formData.class_id)?.name || '-';
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 100,
+        status: 'completed',
+        currentDetail: isEditing ? 'Perubahan berhasil disimpan!' : 'Siswa baru berhasil didaftarkan!',
+        steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+        resultSummary: {
+          title: isEditing ? 'Data Siswa Berhasil Diperbarui' : 'Siswa Baru Berhasil Didaftarkan',
+          items: [
+            { label: 'Nama Lengkap', value: formData.full_name },
+            { label: 'NISN', value: formData.nisn },
+            { label: 'Kelas', value: className },
+            { label: 'Token Login', value: studentResult?.token_preview || 'Aktif', badge: 'Siap Pakai' },
+          ],
+          note: isEditing ? 'Pembaruan data siswa langsung tersinkron di DPT.' : 'Siswa dapat menggunakan NISN dan Token di atas untuk masuk ke bilik suara.',
+        },
+      }));
+
+      showNotification('success', isEditing ? `Data siswa ${formData.full_name} berhasil diperbarui` : `Siswa ${formData.full_name} berhasil ditambahkan`);
     } catch (err: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: err?.message || 'Terjadi kesalahan sistem saat menyimpan siswa',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', err?.message || 'Terjadi kesalahan sistem');
     }
   };
@@ -169,60 +252,215 @@ export const AdminStudentsView: React.FC<Props> = ({ school, election }) => {
 
   const handleExecuteDelete = async () => {
     if (!studentToDelete) return;
-    setIsDeleting(true);
+    setIsDeleteModalOpen(false);
+
+    setProgressModal({
+      isOpen: true,
+      title: 'Menghapus Data Siswa',
+      subtitle: `Siswa: ${studentToDelete.full_name} (NISN: ${studentToDelete.nisn})`,
+      icon: 'trash',
+      status: 'running',
+      progressPercent: 30,
+      currentDetail: 'Menghapus token login dan rekaman siswa...',
+      steps: [
+        { id: '1', label: 'Memverifikasi status hak suara siswa', status: 'running' },
+        { id: '2', label: 'Menghapus kredensial token dari database', status: 'pending' },
+        { id: '3', label: 'Menghapus data siswa dari Supabase & memori lokal', status: 'pending' },
+      ],
+    });
 
     try {
+      await sleep(250);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 70,
+        currentDetail: 'Menghapus dari cloud database Supabase...',
+        steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+      }));
+
       const res = await db.deleteStudent(studentToDelete.id);
+      await sleep(200);
+
       if (res.success) {
-        showNotification('success', res.message);
         loadData();
-        setIsDeleteModalOpen(false);
+        setProgressModal(prev => ({
+          ...prev,
+          progressPercent: 100,
+          status: 'completed',
+          currentDetail: 'Data siswa berhasil dihapus!',
+          steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+          resultSummary: {
+            title: 'Penghapusan Siswa Berhasil',
+            items: [
+              { label: 'Nama Siswa', value: studentToDelete.full_name },
+              { label: 'NISN', value: studentToDelete.nisn },
+              { label: 'Status Token', value: 'Dicabut Permanen', badge: 'Terhapus' },
+            ],
+            note: 'Data pemilih telah dikeluarkan dari Daftar Pemilih Tetap (DPT).',
+          },
+        }));
+        showNotification('success', res.message);
       } else {
+        setProgressModal(prev => ({
+          ...prev,
+          status: 'error',
+          errorMessage: res.message,
+          steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+        }));
         showNotification('error', res.message);
       }
     } catch (e: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: e?.message || 'Gagal menghapus siswa',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', e?.message || 'Gagal menghapus siswa');
-    } finally {
-      setIsDeleting(false);
     }
   };
 
   const handleExecuteDeleteAll = async () => {
-    setIsDeletingAll(true);
+    setIsDeleteAllModalOpen(false);
+
+    setProgressModal({
+      isOpen: true,
+      title: 'Mengosongkan Seluruh Data Siswa',
+      subtitle: 'Menghapus seluruh siswa, token kredensial, dan rekapitulasi DPT',
+      icon: 'trash',
+      status: 'running',
+      progressPercent: 20,
+      currentDetail: 'Menghapus token login dan foreign keys...',
+      steps: [
+        { id: '1', label: 'Menghapus seluruh kredensial token login', status: 'running' },
+        { id: '2', label: 'Menghapus riwayat partisipasi pemilih', status: 'pending' },
+        { id: '3', label: 'Menghapus seluruh data siswa di Supabase', status: 'pending' },
+        { id: '4', label: 'Mengosongkan cache DPT lokal', status: 'pending' },
+      ],
+    });
+
     try {
+      await sleep(300);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 55,
+        currentDetail: 'Menghapus data siswa dari cloud database...',
+        steps: prev.steps.map(s => (s.id === '1' || s.id === '2') ? { ...s, status: 'completed' } : s.id === '3' ? { ...s, status: 'running' } : s),
+      }));
+
       const res = await db.deleteAllStudents();
+      await sleep(250);
+
       if (res.success) {
-        showNotification('success', res.message);
         setSelectedIds(new Set());
         loadData();
-        setIsDeleteAllModalOpen(false);
+
+        setProgressModal(prev => ({
+          ...prev,
+          progressPercent: 100,
+          status: 'completed',
+          currentDetail: 'Seluruh data siswa berhasil dikosongkan!',
+          steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+          resultSummary: {
+            title: 'Pengosongan Data Siswa Berhasil',
+            items: [
+              { label: 'Jumlah Siswa Dihapus', value: `${res.deletedCount} Siswa`, badge: 'Dibersihkan' },
+              { label: 'Token Kredensial', value: '0 Token Aktif' },
+              { label: 'Status DPT', value: 'Kosong (Siap Impor Ulang)' },
+            ],
+            note: 'Database siswa kini bersih. Anda dapat mengimpor berkas Excel baru sewaktu-waktu.',
+          },
+        }));
+        showNotification('success', res.message);
       } else {
+        setProgressModal(prev => ({
+          ...prev,
+          status: 'error',
+          errorMessage: res.message,
+          steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+        }));
         showNotification('error', res.message);
       }
     } catch (e: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: e?.message || 'Gagal menghapus seluruh data siswa',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', e?.message || 'Gagal menghapus seluruh data siswa');
-    } finally {
-      setIsDeletingAll(false);
     }
   };
 
   const handleExecuteBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    setIsBulkDeleting(true);
+    const countToDelete = selectedIds.size;
+    setIsBulkDeleteModalOpen(false);
+
+    setProgressModal({
+      isOpen: true,
+      title: 'Menghapus Siswa Terpilih',
+      subtitle: `Menghapus ${countToDelete} siswa dari Daftar Pemilih Tetap`,
+      icon: 'trash',
+      status: 'running',
+      progressPercent: 25,
+      currentDetail: 'Memverifikasi status hak suara siswa...',
+      steps: [
+        { id: '1', label: 'Validasi hak suara siswa terpilih', status: 'running' },
+        { id: '2', label: 'Menghapus token kredensial siswa terpilih', status: 'pending' },
+        { id: '3', label: 'Menghapus rekaman siswa dari database', status: 'pending' },
+      ],
+    });
+
     try {
+      await sleep(250);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 65,
+        currentDetail: 'Menghapus rekaman dari database awan...',
+        steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+      }));
+
       const res = await db.deleteMultipleStudents(Array.from(selectedIds));
+      await sleep(250);
+
       if (res.success) {
-        showNotification('success', res.message);
         setSelectedIds(new Set());
         loadData();
-        setIsBulkDeleteModalOpen(false);
+
+        setProgressModal(prev => ({
+          ...prev,
+          progressPercent: 100,
+          status: 'completed',
+          currentDetail: `Berhasil menghapus ${res.deletedCount} siswa terpilih!`,
+          steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+          resultSummary: {
+            title: 'Penghapusan Masal Berhasil',
+            items: [
+              { label: 'Siswa Dihapus', value: `${res.deletedCount} Siswa`, badge: 'Selesai' },
+              { label: 'Sisa Pemilih Terdaftar', value: `${students.length - res.deletedCount} Siswa` },
+            ],
+            note: 'Daftar pemilih terpilih telah dihapus secara aman dari sistem.',
+          },
+        }));
+        showNotification('success', res.message);
       } else {
+        setProgressModal(prev => ({
+          ...prev,
+          status: 'error',
+          errorMessage: res.message,
+          steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+        }));
         showNotification('error', res.message);
       }
     } catch (e: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: e?.message || 'Gagal menghapus siswa terpilih',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', e?.message || 'Gagal menghapus siswa terpilih');
-    } finally {
-      setIsBulkDeleting(false);
     }
   };
 
@@ -233,21 +471,71 @@ export const AdminStudentsView: React.FC<Props> = ({ school, election }) => {
 
   const handleExecuteRotate = async () => {
     if (!studentToRotate) return;
-    setIsRotating(true);
+    setIsRotateModalOpen(false);
+
+    setProgressModal({
+      isOpen: true,
+      title: 'Penerbitan Ulang Token Siswa',
+      subtitle: `Siswa: ${studentToRotate.full_name} (NISN: ${studentToRotate.nisn})`,
+      icon: 'user',
+      status: 'running',
+      progressPercent: 30,
+      currentDetail: 'Mencabut token lama dan membuat token baru...',
+      steps: [
+        { id: '1', label: 'Verifikasi status belum memilih', status: 'running' },
+        { id: '2', label: 'Menghasilkan token kriptografis 6-karakter baru', status: 'pending' },
+        { id: '3', label: 'Menyimpan token baru ke Supabase', status: 'pending' },
+      ],
+    });
 
     try {
+      await sleep(250);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 70,
+        currentDetail: 'Menyimpan kredensial baru ke database...',
+        steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+      }));
+
       const res = await db.rotateToken(studentToRotate.id);
+      await sleep(200);
+
       if (res.success) {
-        showNotification('success', `Token baru berhasil diterbitkan: ${res.newToken}`);
         loadData();
-        setIsRotateModalOpen(false);
+        setProgressModal(prev => ({
+          ...prev,
+          progressPercent: 100,
+          status: 'completed',
+          currentDetail: 'Token baru berhasil diterbitkan!',
+          steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+          resultSummary: {
+            title: 'Rotasi Token Berhasil',
+            items: [
+              { label: 'Siswa', value: studentToRotate.full_name },
+              { label: 'Token Baru', value: res.newToken || '-', badge: 'Aktif' },
+              { label: 'Token Lama', value: 'Dicabut' },
+            ],
+            note: 'Berikan token baru ini kepada siswa yang bersangkutan untuk login ke bilik suara.',
+          },
+        }));
+        showNotification('success', `Token baru berhasil diterbitkan: ${res.newToken}`);
       } else {
+        setProgressModal(prev => ({
+          ...prev,
+          status: 'error',
+          errorMessage: res.message || 'Gagal menerbitkan ulang token',
+          steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+        }));
         showNotification('error', res.message || 'Gagal menerbitkan ulang token');
       }
     } catch (e: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: e?.message || 'Gagal merotasi token',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', e?.message || 'Gagal merotasi token');
-    } finally {
-      setIsRotating(false);
     }
   };
 
@@ -291,35 +579,150 @@ export const AdminStudentsView: React.FC<Props> = ({ school, election }) => {
       }
     }
 
+    setProgressModal({
+      isOpen: true,
+      title: 'Membuat Berkas PDF Kartu Login',
+      subtitle: `Menyiapkan ${targetStudents.length} kartu pemilih dalam format A4 cetak`,
+      icon: 'printer',
+      status: 'running',
+      progressPercent: 25,
+      currentDetail: `Menyiapkan data ${targetStudents.length} kartu pemilih...`,
+      steps: [
+        { id: '1', label: 'Mengumpulkan data siswa & token unik', status: 'running' },
+        { id: '2', label: 'Menyusun tata letak lembar A4 & garis gunting', status: 'pending' },
+        { id: '3', label: 'Merender logo sekolah & petunjuk teknis pemilihan', status: 'pending' },
+        { id: '4', label: 'Menghasilkan berkas PDF siap unduh', status: 'pending' },
+      ],
+    });
+
     try {
-      showNotification('success', `Menghasilkan file PDF untuk ${targetStudents.length} kartu login...`);
+      await sleep(300);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 65,
+        currentDetail: 'Merender elemen grafis kartu login...',
+        steps: prev.steps.map(s => (s.id === '1' || s.id === '2') ? { ...s, status: 'completed' } : s.id === '3' ? { ...s, status: 'running' } : s),
+      }));
+
       await generateStudentCardsPDF(targetStudents, school, election);
+      await sleep(250);
+
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 100,
+        status: 'completed',
+        currentDetail: 'File PDF berhasil diunduh ke perangkat Anda!',
+        steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+        resultSummary: {
+          title: 'Kartu Login Siswa Siap Cetak',
+          items: [
+            { label: 'Jumlah Kartu', value: `${targetStudents.length} Kartu`, badge: 'Selesai' },
+            { label: 'Ukuran Kertas', value: 'A4 Portrait (8 kartu / lbr)' },
+            { label: 'Pengaman', value: 'Token Kriptografis Unik' },
+          ],
+          note: 'Gunakan gunting atau pemotong kertas mengikuti garis putus-putus pada cetakan A4.',
+        },
+      }));
+
+      showNotification('success', `Berhasil membuat file PDF untuk ${targetStudents.length} kartu login!`);
     } catch (e: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: 'Gagal membuat file PDF kartu login.',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', 'Gagal membuat file PDF kartu login');
     }
   };
 
-  // Excel Upload Handler
+  // Excel Upload Handler with Real-Time Progress Feedback
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsParsingExcel(true);
+    setProgressModal({
+      isOpen: true,
+      title: 'Membaca & Memvalidasi File Excel Siswa',
+      subtitle: `Memproses berkas: ${file.name}`,
+      icon: 'excel',
+      status: 'running',
+      progressPercent: 20,
+      currentDetail: `Membaca berkas ${file.name}...`,
+      steps: [
+        { id: '1', label: 'Membaca berkas Excel (.xlsx / .csv)', status: 'running' },
+        { id: '2', label: 'Mengurai baris lembar kerja & kolom', status: 'pending' },
+        { id: '3', label: 'Memvalidasi format NISN 10-digit & cek duplikasi', status: 'pending' },
+      ],
+    });
+
     try {
-      const result = await parseStudentExcel(file);
+      await sleep(250);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 50,
+        currentDetail: 'Menguraikan baris lembar kerja...',
+        steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+      }));
+
+      const result = await parseStudentExcel(file, (percent, msg) => {
+        setProgressModal(prev => ({
+          ...prev,
+          progressPercent: Math.max(prev.progressPercent, percent),
+          currentDetail: msg,
+        }));
+      });
+
+      await sleep(250);
       setImportedRows(result.rows);
       setImportReport({
         total: result.totalRows,
         valid: result.validRows.length,
         invalid: result.invalidRows.length,
       });
+
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 100,
+        status: 'completed',
+        currentDetail: `Pemeriksaan selesai: ${result.validRows.length} baris valid dari total ${result.totalRows} baris.`,
+        steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+        resultSummary: {
+          title: 'Hasil Pemeriksaan Berkas Excel',
+          items: [
+            { label: 'Nama Berkas', value: file.name },
+            { label: 'Total Baris Terbaca', value: `${result.totalRows} Siswa` },
+            { label: 'Baris Data Valid', value: `${result.validRows.length} Siswa`, badge: 'Siap Impor' },
+            { label: 'Baris Bermasalah', value: `${result.invalidRows.length} Baris`, badge: result.invalidRows.length > 0 ? 'Perlu Cek' : 'Nihil' },
+          ],
+          note: result.validRows.length > 0
+            ? 'Klik tombol "Buka Pratinjau & Konfirmasi" untuk meninjau data sebelum dimasukkan ke database.'
+            : 'Seluruh baris memiliki kendala format. Periksa pesan error pada tabel pratinjau.',
+        },
+        primaryAction: {
+          label: 'Buka Pratinjau & Konfirmasi',
+          onClick: () => {
+            setProgressModal(prev => ({ ...prev, isOpen: false }));
+            setIsImportModalOpen(true);
+          },
+        },
+      }));
     } catch (err: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: 'Gagal membaca file Excel. Pastikan format file sesuai template yang disediakan.',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
       showNotification('error', 'Gagal membaca file Excel. Pastikan format file sesuai template.');
     } finally {
       setIsParsingExcel(false);
+      e.target.value = '';
     }
   };
 
+  // Confirm Import with Live Granular Progress Ticker
   const handleConfirmImport = async () => {
     const validRows = importedRows.filter(r => r.isValid);
     if (validRows.length === 0) {
@@ -327,12 +730,91 @@ export const AdminStudentsView: React.FC<Props> = ({ school, election }) => {
       return;
     }
 
-    const res = await db.importStudents(validRows);
-    showNotification('success', `Berhasil mengimpor ${res.importedCount} siswa! Token login dibuat otomatis.`);
     setIsImportModalOpen(false);
-    setImportedRows([]);
-    setImportReport(null);
-    loadData();
+
+    setProgressModal({
+      isOpen: true,
+      title: 'Memproses Impor Data Siswa dari Excel',
+      subtitle: `Menyimpan ${validRows.length} siswa dan menerbitkan token login kriptografis`,
+      icon: 'excel',
+      status: 'running',
+      progressPercent: 10,
+      currentDetail: 'Menyiapkan alokasi kelas dan struktur database...',
+      steps: [
+        { id: '1', label: 'Inisialisasi & pemetaan kelas siswa', status: 'running' },
+        { id: '2', label: 'Membuat token login unik & enkripsi kredensial', status: 'pending' },
+        { id: '3', label: 'Menyimpan data pemilih ke basis data lokal & Supabase', status: 'pending' },
+        { id: '4', label: 'Rekapitulasi DPT dan finalisasi kartu login siap cetak', status: 'pending' },
+      ],
+    });
+
+    try {
+      await sleep(300);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 20,
+        currentDetail: 'Menerbitkan token unik untuk setiap siswa...',
+        steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
+      }));
+
+      const res = await db.importStudents(validRows, (info) => {
+        // Map 20% -> 85% range for the student loop
+        const scaledPercent = Math.min(85, Math.max(20, Math.round(20 + (info.percent * 0.65))));
+        setProgressModal(prev => ({
+          ...prev,
+          progressPercent: scaledPercent,
+          currentDetail: `[${info.current}/${info.total}] ${info.stage}`,
+        }));
+      });
+
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 90,
+        currentDetail: 'Menyelesaikan sinkronisasi Supabase dan DPT...',
+        steps: prev.steps.map(s => (s.id === '1' || s.id === '2') ? { ...s, status: 'completed' } : s.id === '3' ? { ...s, status: 'running' } : s),
+      }));
+
+      await sleep(350);
+
+      loadData();
+      setImportedRows([]);
+      setImportReport(null);
+
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: 100,
+        status: 'completed',
+        currentDetail: `Berhasil mengimpor ${res.importedCount} siswa!`,
+        steps: prev.steps.map(s => ({ ...s, status: 'completed' })),
+        resultSummary: {
+          title: 'Hasil Impor Siswa Excel',
+          items: [
+            { label: 'Siswa Berhasil Diimpor', value: `${res.importedCount} Siswa`, badge: 'Sukses' },
+            { label: 'Token Login Dibuat', value: `${res.importedCount} Token`, badge: 'Aktif' },
+            { label: 'Baris Dilewati', value: `${res.skippedCount} Baris` },
+            { label: 'Status DPT', value: 'Terdaftar & Siap Cetak' },
+          ],
+          note: 'Token login 6-karakter unik telah diterbitkan otomatis dan kartu login siap dicetak.',
+        },
+        primaryAction: {
+          label: 'Cetak Kartu Login Siswa',
+          onClick: () => {
+            setProgressModal(prev => ({ ...prev, isOpen: false }));
+            setIsPrintModalOpen(true);
+          },
+        },
+      }));
+
+      showNotification('success', `Berhasil mengimpor ${res.importedCount} siswa!`);
+    } catch (err: any) {
+      setProgressModal(prev => ({
+        ...prev,
+        status: 'error',
+        errorMessage: err?.message || 'Terjadi kesalahan sistem saat mengimpor data siswa.',
+        steps: prev.steps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s),
+      }));
+      showNotification('error', err?.message || 'Gagal mengimpor siswa');
+    }
   };
 
   // Filter & Search Logic
@@ -962,6 +1444,22 @@ export const AdminStudentsView: React.FC<Props> = ({ school, election }) => {
         election={election}
         selectedStudentIds={selectedIds}
         onSuccessNotification={(msg) => showNotification('success', msg)}
+      />
+
+      {/* Progress Notification Modal for Student Operations & Excel */}
+      <ProgressModal
+        isOpen={progressModal.isOpen}
+        title={progressModal.title}
+        subtitle={progressModal.subtitle}
+        icon={progressModal.icon}
+        steps={progressModal.steps}
+        progressPercent={progressModal.progressPercent}
+        currentDetail={progressModal.currentDetail}
+        status={progressModal.status}
+        errorMessage={progressModal.errorMessage}
+        resultSummary={progressModal.resultSummary}
+        primaryAction={progressModal.primaryAction}
+        onClose={() => setProgressModal(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

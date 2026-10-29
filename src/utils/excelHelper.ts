@@ -78,17 +78,22 @@ export function downloadStudentTemplate() {
 /**
  * 2. PARSE AND VALIDATE UPLOADED EXCEL/CSV FILE
  */
-export async function parseStudentExcel(file: File): Promise<{
+export async function parseStudentExcel(
+  file: File,
+  onProgress?: (percent: number, message: string) => void
+): Promise<{
   rows: ParsedStudentRow[];
   totalRows: number;
   validRows: ParsedStudentRow[];
   invalidRows: ParsedStudentRow[];
 }> {
   return new Promise((resolve, reject) => {
+    if (onProgress) onProgress(15, `Membaca berkas ${file.name}...`);
     const reader = new FileReader();
 
     reader.onload = (e) => {
       try {
+        if (onProgress) onProgress(40, 'Membedah struktur tabel dan lembar kerja...');
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
 
@@ -96,6 +101,7 @@ export async function parseStudentExcel(file: File): Promise<{
         const worksheet = workbook.Sheets[firstSheetName];
         const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
+        if (onProgress) onProgress(70, `Memvalidasi format data dari ${rawJson.length} baris siswa...`);
         const parsedRows: ParsedStudentRow[] = [];
         const seenNisns = new Set<string>();
 
