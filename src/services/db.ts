@@ -175,7 +175,16 @@ class DatabaseService {
       if (s) this.school = JSON.parse(s);
 
       const e = localStorage.getItem(STORAGE_KEYS.ELECTION);
-      if (e) this.election = JSON.parse(e);
+      if (e) {
+        this.election = JSON.parse(e);
+        // Pastikan tidak ada sisa start_time & end_time warisan yang menghalangi pemilih
+        delete this.election.start_time;
+        delete this.election.end_time;
+        this.election.status = this.election.status || 'active';
+      } else {
+        delete this.election.start_time;
+        delete this.election.end_time;
+      }
 
       const c = localStorage.getItem(STORAGE_KEYS.CLASSES);
       if (c) this.classes = JSON.parse(c);
@@ -616,7 +625,14 @@ class DatabaseService {
       ]);
 
       if (sData) this.school = { ...this.school, ...sData };
-      if (eData) this.election = { ...this.election, ...eData };
+      if (eData) {
+        this.election = {
+          ...this.election,
+          ...eData,
+          start_time: undefined,
+          end_time: undefined,
+        };
+      }
       if (cData && cData.length > 0) this.classes = cData;
       if (cdData && cdData.length > 0) this.candidates = cdData;
 
@@ -1485,21 +1501,6 @@ class DatabaseService {
     // Check election status
     if (this.election.status !== 'active') {
       return { valid: false, message: 'Pemilihan sedang tidak aktif atau ditutup oleh panitia.' };
-    }
-
-    // Check time bounds if configured
-    const now = Date.now();
-    if (this.election.start_time) {
-      const start = new Date(this.election.start_time).getTime();
-      if (now < start) {
-        return { valid: false, message: 'Pemungutan suara belum dimulai sesuai jadwal resmi.' };
-      }
-    }
-    if (this.election.end_time) {
-      const end = new Date(this.election.end_time).getTime();
-      if (now > end) {
-        return { valid: false, message: 'Waktu pemungutan suara telah berakhir.' };
-      }
     }
 
     // Find student matching token
