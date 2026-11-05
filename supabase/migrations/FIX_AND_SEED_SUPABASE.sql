@@ -138,6 +138,10 @@ INSERT INTO public.schools (
     committee_secretary = EXCLUDED.committee_secretary,
     committee_secretary_nip = EXCLUDED.committee_secretary_nip;
 
+-- Pastikan kolom start_time dan end_time di public.elections mengizinkan NULL
+ALTER TABLE IF EXISTS public.elections ALTER COLUMN start_time DROP NOT NULL;
+ALTER TABLE IF EXISTS public.elections ALTER COLUMN end_time DROP NOT NULL;
+
 -- B. Data Periode Pemilihan
 INSERT INTO public.elections (
     id, school_id, title, academic_year, start_time, end_time, timezone, status, is_published
@@ -146,14 +150,16 @@ INSERT INTO public.elections (
     'a0000000-0000-0000-0000-000000000001',
     'Pemilihan Ketua dan Wakil Ketua OSIS',
     '2026/2027',
-    NOW() - INTERVAL '1 day',
-    NOW() + INTERVAL '7 days',
+    NULL,
+    NULL,
     'Asia/Makassar',
     'active',
     true
 ) ON CONFLICT (id) DO UPDATE SET
     status = EXCLUDED.status,
-    title = EXCLUDED.title;
+    title = EXCLUDED.title,
+    start_time = EXCLUDED.start_time,
+    end_time = EXCLUDED.end_time;
 
 -- C. Data Kelas
 INSERT INTO public.classes (id, election_id, name, grade_level, description) VALUES

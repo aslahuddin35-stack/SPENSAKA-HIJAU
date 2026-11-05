@@ -44,8 +44,6 @@ const DEFAULT_ELECTION: Election = {
   school_id: 'a0000000-0000-0000-0000-000000000001',
   title: 'Pemilihan Ketua dan Wakil Ketua OSIS',
   academic_year: '2026/2027',
-  start_time: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-  end_time: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
   timezone: 'Asia/Makassar',
   status: 'active',
   is_published: true,
@@ -477,8 +475,8 @@ class DatabaseService {
         school_id: this.school.id,
         title: this.election.title,
         academic_year: this.election.academic_year,
-        start_time: this.election.start_time,
-        end_time: this.election.end_time,
+        start_time: this.election.start_time || null,
+        end_time: this.election.end_time || null,
         timezone: this.election.timezone || 'Asia/Makassar',
         status: this.election.status,
         is_published: this.election.is_published,
@@ -1489,15 +1487,19 @@ class DatabaseService {
       return { valid: false, message: 'Pemilihan sedang tidak aktif atau ditutup oleh panitia.' };
     }
 
-    // Check time bounds
+    // Check time bounds if configured
     const now = Date.now();
-    const start = new Date(this.election.start_time).getTime();
-    const end = new Date(this.election.end_time).getTime();
-    if (now < start) {
-      return { valid: false, message: 'Pemungutan suara belum dimulai sesuai jadwal resmi.' };
+    if (this.election.start_time) {
+      const start = new Date(this.election.start_time).getTime();
+      if (now < start) {
+        return { valid: false, message: 'Pemungutan suara belum dimulai sesuai jadwal resmi.' };
+      }
     }
-    if (now > end) {
-      return { valid: false, message: 'Waktu pemungutan suara telah berakhir.' };
+    if (this.election.end_time) {
+      const end = new Date(this.election.end_time).getTime();
+      if (now > end) {
+        return { valid: false, message: 'Waktu pemungutan suara telah berakhir.' };
+      }
     }
 
     // Find student matching token

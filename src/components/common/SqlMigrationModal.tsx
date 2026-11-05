@@ -62,14 +62,18 @@ CREATE TABLE IF NOT EXISTS public.elections (
     school_id UUID REFERENCES public.schools(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL DEFAULT 'Pemilihan Ketua dan Wakil Ketua OSIS',
     academic_year VARCHAR(20) NOT NULL DEFAULT '2026/2027',
-    start_time TIMESTAMPTZ NOT NULL DEFAULT NOW() - INTERVAL '1 day',
-    end_time TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '7 days',
+    start_time TIMESTAMPTZ,
+    end_time TIMESTAMPTZ,
     timezone VARCHAR(50) DEFAULT 'Asia/Makassar',
     status VARCHAR(20) NOT NULL DEFAULT 'active',
     is_published BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Izinkan start_time dan end_time bernilai NULL jika tabel sudah dibuat sebelumnya
+ALTER TABLE IF EXISTS public.elections ALTER COLUMN start_time DROP NOT NULL;
+ALTER TABLE IF EXISTS public.elections ALTER COLUMN end_time DROP NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.classes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -299,14 +303,16 @@ INSERT INTO public.elections (
     'a0000000-0000-0000-0000-000000000001',
     'Pemilihan Ketua dan Wakil Ketua OSIS',
     '2026/2027',
-    NOW() - INTERVAL '1 day',
-    NOW() + INTERVAL '7 days',
+    NULL,
+    NULL,
     'Asia/Makassar',
     'active',
     true
 ) ON CONFLICT (id) DO UPDATE SET
     status = EXCLUDED.status,
-    title = EXCLUDED.title;
+    title = EXCLUDED.title,
+    start_time = EXCLUDED.start_time,
+    end_time = EXCLUDED.end_time;
 
 INSERT INTO public.classes (id, election_id, name, grade_level, description) VALUES
 ('c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'VII-A', '7', 'Kelas 7 Reguler A'),

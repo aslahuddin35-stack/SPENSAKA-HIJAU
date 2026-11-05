@@ -347,13 +347,13 @@ export const AdminSettingsView: React.FC<Props> = ({
     setProgressModal({
       isOpen: true,
       title: 'Menyimpan Pengaturan Pemilihan',
-      subtitle: 'Memperbarui judul, tahun ajaran, jadwal pelaksanaan WITA, dan status pemilihan',
+      subtitle: 'Memperbarui judul, tahun ajaran, zona waktu, dan status aktif pemilihan',
       icon: 'settings',
       status: 'running',
       progressPercent: 20,
-      currentDetail: 'Memvalidasi jadwal dan parameter pemilihan...',
+      currentDetail: 'Memvalidasi parameter pemilihan...',
       steps: [
-        { id: '1', label: 'Validasi jadwal dan zona waktu WITA', status: 'running' },
+        { id: '1', label: 'Validasi konfigurasi periode pemilihan', status: 'running' },
         { id: '2', label: 'Menyimpan konfigurasi ke database lokal', status: 'pending' },
         { id: '3', label: 'Sinkronisasi ke database awan Supabase', status: 'pending' },
         { id: '4', label: 'Memperbarui status portal bilik suara siswa', status: 'pending' },
@@ -369,14 +369,22 @@ export const AdminSettingsView: React.FC<Props> = ({
         steps: prev.steps.map(s => s.id === '1' ? { ...s, status: 'completed' } : s.id === '2' ? { ...s, status: 'running' } : s),
       }));
 
-      const updated = await db.updateElection(electionForm);
+      // Bersihkan tanggal mulai dan selesai sehingga pemilihan tidak dibatasi tanggal
+      const electionPayload: Election = {
+        ...electionForm,
+        start_time: undefined,
+        end_time: undefined,
+      };
+
+      const updated = await db.updateElection(electionPayload);
+      setElectionForm(updated);
       onUpdateElection(updated);
 
       await sleep(300);
       setProgressModal(prev => ({
         ...prev,
         progressPercent: 85,
-        currentDetail: 'Sinkronisasi jadwal ke Supabase...',
+        currentDetail: 'Sinkronisasi konfigurasi ke Supabase...',
         steps: prev.steps.map(s => (s.id === '1' || s.id === '2') ? { ...s, status: 'completed' } : s.id === '3' ? { ...s, status: 'running' } : s),
       }));
 
@@ -392,13 +400,13 @@ export const AdminSettingsView: React.FC<Props> = ({
           items: [
             { label: 'Judul Pemilihan', value: updated.title },
             { label: 'Tahun Ajaran', value: updated.academic_year },
-            { label: 'Status Pemilihan', value: updated.status.toUpperCase(), badge: updated.status === 'active' ? 'Sedang Berlangsung' : 'Terjadwal' },
-            { label: 'Zona Waktu', value: updated.timezone },
+            { label: 'Status Pemilihan', value: updated.status.toUpperCase(), badge: updated.status === 'active' ? 'Aktif (Siap Memilih)' : 'Non-Aktif' },
+            { label: 'Batas Tanggal', value: 'Tanpa Batasan Waktu (Bebas)', badge: 'Fleksibel' },
           ],
-          note: 'Status pemilihan telah disinkronkan ke portal bilik suara siswa.',
+          note: 'Pemilihan tidak dibatasi tanggal mulai/selesai. Akses bilik suara sepenuhnya dikendalikan status pemilihan.',
         },
       }));
-      showNotification('success', 'Konfigurasi periode dan jadwal pemilihan berhasil disimpan!');
+      showNotification('success', 'Konfigurasi periode pemilihan berhasil disimpan tanpa batasan tanggal!');
     } catch (err: any) {
       setProgressModal(prev => ({
         ...prev,
@@ -733,7 +741,7 @@ export const AdminSettingsView: React.FC<Props> = ({
           </form>
         </div>
 
-        {/* BAGIAN B: PERIODE & JADWAL PEMILIHAN */}
+        {/* BAGIAN B: PERIODE & STATUS PEMILIHAN */}
         <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-xs space-y-5">
           <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
             <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
@@ -741,10 +749,10 @@ export const AdminSettingsView: React.FC<Props> = ({
             </div>
             <div>
               <h3 className="font-extrabold text-slate-900 text-sm sm:text-base">
-                Periode & Jadwal Pemilihan
+                Periode & Status Pemilihan
               </h3>
               <p className="text-[11px] text-slate-500">
-                Pengaturan tanggal, waktu, zona waktu WITA, dan status voting
+                Pengaturan nama pemilihan, tahun ajaran, zona waktu, dan aktivasi bilik suara
               </p>
             </div>
           </div>
@@ -792,24 +800,20 @@ export const AdminSettingsView: React.FC<Props> = ({
                 onChange={(e) => setElectionForm({ ...electionForm, status: e.target.value as ElectionStatus })}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
               >
-                <option value="active">Aktif (Siswa Dapat Memberikan Suara)</option>
+                <option value="active">Aktif (Siswa Bebas Memberikan Suara Kapan Saja)</option>
                 <option value="paused">Ditunda / Terkunci Sementara</option>
                 <option value="closed">Ditutup Resmi</option>
                 <option value="draft">Draft (Persiapan)</option>
               </select>
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-              <span className="font-bold text-slate-800 block">Jadwal Mulai & Berakhir:</span>
-              <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
-                <div>
-                  <span className="block text-slate-400">Waktu Mulai:</span>
-                  <span className="font-semibold text-slate-800">{new Date(electionForm.start_time).toLocaleString('id-ID')}</span>
-                </div>
-                <div>
-                  <span className="block text-slate-400">Waktu Selesai:</span>
-                  <span className="font-semibold text-slate-800">{new Date(electionForm.end_time).toLocaleString('id-ID')}</span>
-                </div>
+            <div className="p-3.5 bg-emerald-50/80 rounded-2xl border border-emerald-200/90 text-emerald-900 flex items-start gap-3">
+              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="space-y-1 text-[11px] leading-relaxed">
+                <p className="font-bold">Mode Pemilihan Tanpa Batasan Tanggal</p>
+                <p className="text-emerald-800">
+                  Pemilihan ini tidak menggunakan batas tanggal mulai maupun tanggal selesai. Bilik suara dapat diakses siswa kapan saja selama <strong>Status Pemilihan</strong> disetel ke <strong>Aktif</strong>.
+                </p>
               </div>
             </div>
 
@@ -819,7 +823,7 @@ export const AdminSettingsView: React.FC<Props> = ({
                 className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl transition shadow-sm"
               >
                 <Save className="w-3.5 h-3.5" />
-                <span>Simpan Jadwal Pemilihan</span>
+                <span>Simpan Pengaturan Pemilihan</span>
               </button>
             </div>
           </form>

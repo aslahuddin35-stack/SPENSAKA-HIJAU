@@ -52,17 +52,17 @@ export const AdminDashboardView: React.FC<Props> = ({
   }, []);
 
   const getElectionTimingStatus = () => {
-    const now = Date.now();
-    const start = new Date(election.start_time).getTime();
-    const end = new Date(election.end_time).getTime();
-
-    if (now < start) {
-      return { label: 'Belum Dimulai', color: 'bg-amber-100 text-amber-800 border-amber-300' };
+    switch (election.status) {
+      case 'active':
+        return { label: 'Pemilihan Aktif', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+      case 'paused':
+        return { label: 'Terkunci Sementara', color: 'bg-amber-100 text-amber-800 border-amber-300' };
+      case 'closed':
+        return { label: 'Ditutup Resmi', color: 'bg-rose-100 text-rose-800 border-rose-300' };
+      case 'draft':
+      default:
+        return { label: 'Persiapan / Draft', color: 'bg-slate-100 text-slate-800 border-slate-300' };
     }
-    if (now > end) {
-      return { label: 'Pemungutan Suara Berakhir', color: 'bg-slate-100 text-slate-800 border-slate-300' };
-    }
-    return { label: 'Sedang Berlangsung', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
   };
 
   const timingStatus = getElectionTimingStatus();
@@ -296,7 +296,7 @@ export const AdminDashboardView: React.FC<Props> = ({
 
             <div className="space-y-2.5 text-xs">
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-slate-600 font-medium">Jadwal Pemilihan:</span>
+                <span className="text-slate-600 font-medium">Status Pemilihan:</span>
                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${timingStatus.color}`}>
                   {timingStatus.label}
                 </span>

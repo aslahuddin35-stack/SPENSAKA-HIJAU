@@ -25,8 +25,8 @@ export interface Election {
   school_id: string;
   title: string;
   academic_year: string;
-  start_time: string;
-  end_time: string;
+  start_time?: string;
+  end_time?: string;
   timezone: string;
   status: ElectionStatus;
   is_published: boolean;
