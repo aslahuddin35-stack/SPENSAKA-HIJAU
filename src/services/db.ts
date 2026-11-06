@@ -479,7 +479,9 @@ class DatabaseService {
       }
 
       // 2. Election
-      const eRes = await supabase.from('elections').upsert([{
+      // Remote Supabase might have NOT NULL on start_time / end_time if user hasn't run ALTER TABLE.
+      // We first try with null/values; if PostgreSQL returns null constraint violation (23502), fallback with safe infinite/wide timestamps (2000 to 2099) so sync never fails!
+      const electionPayload = {
         id: this.election.id,
         school_id: this.school.id,
         title: this.election.title,
@@ -489,7 +491,21 @@ class DatabaseService {
         timezone: this.election.timezone || 'Asia/Makassar',
         status: this.election.status,
         is_published: this.election.is_published,
-      }]);
+      };
+
+      let eRes = await supabase.from('elections').upsert([electionPayload]);
+
+      // If remote column violates NOT NULL constraint (code 23502 or message contains not-null constraint)
+      if (eRes.error && (eRes.error.code === '23502' || eRes.error.message.includes('not-null') || eRes.error.message.includes('start_time'))) {
+        const fallbackStartTime = '2000-01-01T00:00:00Z';
+        const fallbackEndTime = '2099-12-31T23:59:59Z';
+        eRes = await supabase.from('elections').upsert([{
+          ...electionPayload,
+          start_time: fallbackStartTime,
+          end_time: fallbackEndTime,
+        }]);
+      }
+
       if (eRes.error) {
         return { success: false, message: `Gagal menyimpan periode pemilihan: ${eRes.error.message}` };
       }
@@ -734,7 +750,25 @@ class DatabaseService {
 
     if (this.tablesExistInSupabase) {
       try {
-        await supabase.from('elections').upsert([this.election]);
+        const payload = {
+          id: this.election.id,
+          school_id: this.school.id,
+          title: this.election.title,
+          academic_year: this.election.academic_year,
+          start_time: this.election.start_time || null,
+          end_time: this.election.end_time || null,
+          timezone: this.election.timezone || 'Asia/Makassar',
+          status: this.election.status,
+          is_published: this.election.is_published,
+        };
+        const { error } = await supabase.from('elections').upsert([payload]);
+        if (error && (error.code === '23502' || error.message.includes('not-null') || error.message.includes('start_time'))) {
+          await supabase.from('elections').upsert([{
+            ...payload,
+            start_time: '2000-01-01T00:00:00Z',
+            end_time: '2099-12-31T23:59:59Z',
+          }]);
+        }
       } catch (e) {
         console.warn('Supabase remote updateElection notice:', e);
       }
