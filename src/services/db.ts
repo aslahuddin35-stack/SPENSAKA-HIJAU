@@ -189,17 +189,13 @@ class DatabaseService {
       const c = localStorage.getItem(STORAGE_KEYS.CLASSES);
       if (c) this.classes = JSON.parse(c);
 
-      // Ensure all students are cleared per user explicit request
-      const PURGE_FLAG = 'evoting_students_purged_user_request_v1';
-      if (typeof localStorage !== 'undefined' && localStorage.getItem(PURGE_FLAG) !== 'done') {
-        this.students = [];
-        this.voterParticipation = {};
-        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify([]));
-        localStorage.setItem(STORAGE_KEYS.PARTICIPATION, JSON.stringify({}));
-        localStorage.setItem(PURGE_FLAG, 'done');
-      } else {
-        const st = localStorage.getItem(STORAGE_KEYS.STUDENTS);
-        if (st) this.students = JSON.parse(st);
+      const st = localStorage.getItem(STORAGE_KEYS.STUDENTS);
+      if (st) {
+        try {
+          this.students = JSON.parse(st);
+        } catch {
+          // keep existing
+        }
       }
 
       const cd = localStorage.getItem(STORAGE_KEYS.CANDIDATES);
@@ -311,7 +307,18 @@ class DatabaseService {
       }
 
       // 3. Test WRITE permission to detect Row Level Security (RLS) block (Error 42501)
-      const testWrite = await supabase.from('schools').upsert([{
+      const existingSchool = schoolsData && schoolsData.length > 0 ? schoolsData[0] : null;
+      const testSchoolPayload = existingSchool ? {
+        id: existingSchool.id,
+        name: existingSchool.name,
+        logo_url: existingSchool.logo_url,
+        address: existingSchool.address,
+        contact_phone: existingSchool.contact_phone,
+        contact_email: existingSchool.contact_email,
+        principal_name: existingSchool.principal_name,
+        committee_chair: existingSchool.committee_chair,
+        committee_secretary: existingSchool.committee_secretary,
+      } : {
         id: this.school.id,
         name: this.school.name,
         logo_url: this.school.logo_url,
@@ -321,7 +328,9 @@ class DatabaseService {
         principal_name: this.school.principal_name,
         committee_chair: this.school.committee_chair,
         committee_secretary: this.school.committee_secretary,
-      }]);
+      };
+
+      const testWrite = await supabase.from('schools').upsert([testSchoolPayload]);
 
       if (testWrite.error) {
         if (testWrite.error.code === '42501' || testWrite.error.message.includes('row-level security')) {
@@ -349,61 +358,17 @@ class DatabaseService {
         };
       }
 
-      // Test INSERT permission on classes to ensure table-level RLS policies allow adding rows
-      const testClassWrite = await supabase.from('classes').insert([{
-        id: '00000000-0000-0000-0000-000000000000',
-        election_id: this.election.id,
-        name: '__RLS_TEST__',
-        grade_level: '7',
-      }]);
-
-      if (testClassWrite.error) {
-        if (testClassWrite.error.code === '42501' || testClassWrite.error.message.includes('row-level security')) {
-          this.isRlsBlocked = true;
-          this.isWritable = false;
-          this.lastSyncError = 'Row-Level Security (Error 42501) memblokir operasi INSERT kelas/siswa.';
-          return {
-            connected: true,
-            tablesFound: true,
-            writable: false,
-            rlsBlocked: true,
-            counts: this.remoteCounts,
-            details: 'Tabel Supabase terdeteksi, namun izin INSERT diblokir oleh Row-Level Security (Error 42501). Jalankan script perbaikan SQL di Supabase SQL Editor agar sistem dapat menambah/memperbarui data secara langsung.',
-          };
-        }
-      } else {
-        // Clean up test row
-        await supabase.from('classes').delete().eq('name', '__RLS_TEST__');
-      }
-
       // Write test succeeded!
       this.isWritable = true;
       this.isRlsBlocked = false;
       this.lastSyncError = null;
 
-      // User request: purge all existing students in remote Supabase
-      const REMOTE_PURGE_FLAG = 'supabase_students_purged_user_request_v1';
-      if (typeof localStorage !== 'undefined' && localStorage.getItem(REMOTE_PURGE_FLAG) !== 'done') {
-        try {
-          await supabase.from('voter_credentials').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-          await supabase.from('voter_participation').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-          await supabase.from('students').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-          this.remoteCounts.students = 0;
-          this.students = [];
-          this.voterParticipation = {};
-          this.saveToLocalStorage();
-          localStorage.setItem(REMOTE_PURGE_FLAG, 'done');
-        } catch (purgeErr) {
-          console.warn('Initial remote student purge error:', purgeErr);
-        }
-      }
-
-      // 4. If Supabase is writable and already has data, sync it down;
-      // If remote has 0 rows, auto-push initial data so Supabase is immediately populated!
-      if (this.remoteCounts.candidates > 0 || this.remoteCounts.classes > 0) {
+      // 4. Synchronize data:
+      // If remote Supabase contains records (candidates, classes, or students), pull the latest cloud snapshot into local storage!
+      if (this.remoteCounts.students > 0 || this.remoteCounts.candidates > 0 || this.remoteCounts.classes > 0) {
         await this.pullDataFromSupabase();
-      } else if (this.remoteCounts.schools <= 1 && this.remoteCounts.candidates === 0) {
-        // Auto-seed initial data to Supabase
+      } else if (this.remoteCounts.schools === 0 && this.remoteCounts.candidates === 0 && this.remoteCounts.students === 0 && this.students.length > 0) {
+        // If remote database is completely fresh and empty but local app already has data, push initial local data to Supabase
         await this.pushDataToSupabase();
       }
 
@@ -579,18 +544,23 @@ class DatabaseService {
           gender: s.gender || null,
           is_active: s.is_active ?? true,
         }));
-        const stRes = await supabase.from('students').upsert(studentPayload);
-        if (stRes.error) {
-          if (stRes.error.code === '42501' || stRes.error.message.includes('row-level security')) {
-            this.isRlsBlocked = true;
-            this.isWritable = false;
-            return {
-              success: false,
-              rlsError: true,
-              message: 'Izin tulis tabel siswa diblokir oleh Row Level Security (Error 42501). Jalankan skrip perbaikan SQL di Supabase SQL Editor.',
-            };
+
+        const CHUNK_SIZE = 100;
+        for (let i = 0; i < studentPayload.length; i += CHUNK_SIZE) {
+          const chunk = studentPayload.slice(i, i + CHUNK_SIZE);
+          const stRes = await supabase.from('students').upsert(chunk);
+          if (stRes.error) {
+            if (stRes.error.code === '42501' || stRes.error.message.includes('row-level security')) {
+              this.isRlsBlocked = true;
+              this.isWritable = false;
+              return {
+                success: false,
+                rlsError: true,
+                message: 'Izin tulis tabel siswa diblokir oleh Row Level Security (Error 42501). Jalankan skrip perbaikan SQL di Supabase SQL Editor.',
+              };
+            }
+            return { success: false, message: `Gagal menyimpan data siswa: ${stRes.error.message}` };
           }
-          return { success: false, message: `Gagal menyimpan data siswa: ${stRes.error.message}` };
         }
 
         // 6. Voter credentials
@@ -600,17 +570,41 @@ class DatabaseService {
           token_preview: s.token_preview || s.token || 'VOTE-0000',
           is_revoked: s.is_token_revoked ?? false,
         }));
-        await supabase.from('voter_credentials').upsert(credsPayload);
+
+        for (let i = 0; i < credsPayload.length; i += CHUNK_SIZE) {
+          const chunk = credsPayload.slice(i, i + CHUNK_SIZE);
+          const credRes = await supabase.from('voter_credentials').upsert(chunk);
+          if (credRes.error) {
+            if (credRes.error.code === '42501' || credRes.error.message.includes('row-level security')) {
+              this.isRlsBlocked = true;
+              this.isWritable = false;
+              return {
+                success: false,
+                rlsError: true,
+                message: 'Izin tulis tabel kredensial token siswa diblokir oleh RLS (Error 42501).',
+              };
+            }
+            console.warn('Voter credentials upsert notice:', credRes.error);
+          }
+        }
       }
 
       this.isWritable = true;
       this.isRlsBlocked = false;
       this.lastSyncError = null;
+      this.remoteCounts = {
+        schools: 1,
+        elections: 1,
+        classes: this.classes.length,
+        candidates: this.candidates.length,
+        students: this.students.length,
+        ballots: this.ballots.length,
+      };
       this.saveToLocalStorage();
 
       return {
         success: true,
-        message: 'Seluruh data sekolah, periode pemilihan, kelas, kandidat, dan siswa berhasil disinkronkan ke Supabase!',
+        message: `Seluruh data sekolah, periode pemilihan, ${this.classes.length} kelas, ${this.candidates.length} kandidat, dan ${this.students.length} siswa tersimpan permanen di Supabase!`,
       };
     } catch (err: any) {
       return { success: false, message: err?.message || 'Terjadi kesalahan saat pengiriman data ke Supabase' };
@@ -630,14 +624,14 @@ class DatabaseService {
         { data: vpData },
         { data: blData },
       ] = await Promise.all([
-        supabase.from('schools').select('*').limit(1).single(),
-        supabase.from('elections').select('*').limit(1).single(),
+        supabase.from('schools').select('*').limit(1).maybeSingle(),
+        supabase.from('elections').select('*').limit(1).maybeSingle(),
         supabase.from('classes').select('*').order('name'),
         supabase.from('candidates').select('*').order('ballot_number'),
-        supabase.from('students').select('*').order('full_name'),
-        supabase.from('voter_credentials').select('*'),
-        supabase.from('voter_participation').select('*'),
-        supabase.from('ballots').select('*'),
+        supabase.from('students').select('*').range(0, 4999).order('full_name'),
+        supabase.from('voter_credentials').select('*').range(0, 4999),
+        supabase.from('voter_participation').select('*').range(0, 4999),
+        supabase.from('ballots').select('*').range(0, 9999),
       ]);
 
       if (sData) this.school = { ...this.school, ...sData };
@@ -682,6 +676,15 @@ class DatabaseService {
       if (blData) {
         this.ballots = blData;
       }
+
+      this.remoteCounts = {
+        schools: sData ? 1 : (this.remoteCounts.schools || 0),
+        elections: eData ? 1 : (this.remoteCounts.elections || 0),
+        classes: (cData && cData.length > 0) ? cData.length : this.classes.length,
+        candidates: (cdData && cdData.length > 0) ? cdData.length : this.candidates.length,
+        students: (stData && stData.length > 0) ? stData.length : this.students.length,
+        ballots: blData ? blData.length : this.ballots.length,
+      };
 
       this.saveToLocalStorage();
       return true;
